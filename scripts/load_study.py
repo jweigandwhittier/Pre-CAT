@@ -83,10 +83,11 @@ def recon_quesp(num, directory):
     images = data.proc_data
     freq = data.method['PVM_FrqWork'][0]
     powers = data.method['Fp_SatPows']
-    times = data.method['Fp_SatDur']
+    tsats = data.method['Fp_SatDur']
+    trec = data.method['PVM_RepetitionTime']
     offsets = data.method['Fp_SatOffset']
     offsets_ppm = np.round(offsets / freq, 2)
-    study = {"imgs": images, "powers": powers, "times": times, "offsets": offsets_ppm}
+    study = {"imgs": images, "powers": powers, "tsats": tsats, "trec": trec, "offsets": offsets_ppm}
     return study
 
 def process_quesp(recon_data):
@@ -95,7 +96,8 @@ def process_quesp(recon_data):
     """
     images = recon_data["imgs"]
     powers = recon_data["powers"]
-    times = recon_data["times"]
+    tsats = recon_data["tsats"]
+    trec =  recon_data["trec"]
     offsets_ppm = recon_data["offsets"]
     # 1. Normalize
     THRESHOLD_PPM = 15
@@ -110,12 +112,12 @@ def process_quesp(recon_data):
             images[:, :, j] /= m0
     # 2. Calculate MTRasym and MTRrex
     images = np.nan_to_num(images)
-    mtr_maps = calc_mtr(images, powers, times, offsets_ppm)
+    mtr_maps = calc_mtr(images, powers, tsats, trec, offsets_ppm)
     reference = images[:,:,ref_index[0]]
     study = {"mtr_maps": mtr_maps, "m0": reference}
     return study
 
-def calc_mtr(images, powers, times, offsets_ppm):
+def calc_mtr(images, powers, tsats, trec, offsets_ppm):
     """
     Calculates MTRasym/MTRrex maps for QUESP.
     """
@@ -128,14 +130,15 @@ def calc_mtr(images, powers, times, offsets_ppm):
             neg_idx = np.where((powers == power) & (offsets_ppm == -pos_offset))[0]
             pos_img = images[:,:,pos_idx]
             neg_img = images[:,:,neg_idx]
-            time = times[pos_idx][0]
+            tsat = tsats[pos_idx][0]
             mtr_asym_img = np.squeeze(neg_img - pos_img)
             mtr_rex_img = np.squeeze(1/pos_img - 1/neg_img)
             map_data = {
                     'mtr_asym': mtr_asym_img, 
                     'mtr_rex': mtr_rex_img,
                     'b1': power, 
-                    'time': time,
+                    'tsat': tsat,
+                    'trec': trec,
                     'offset': pos_offset
                 }
             mtr_maps.append(map_data)

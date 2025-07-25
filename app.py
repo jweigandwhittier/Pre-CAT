@@ -286,9 +286,23 @@ def do_data_submission():
                     quesp_path = st.text_input('Input QUESP experiment number', help="Currently, only QUESP experiments run using the 'fp_EPI' sequence are supported.")
                     t1_path = st.text_input('Input T1 mapping experiment number', help="Currently, only VTR RARE T1 mapping is supported.")
                     if quesp_path and t1_path:
-                        quesp_type = st.radio('QUESP analysis type', ["Standard (MTRasym)", "Inverse (MTRrex)"], horizontal=True)
+                        fixed_fb = None
+                        quesp_type = st.radio('QUESP analysis type', ["Standard (MTRasym)", "Inverse (MTRrex)", "Omega Plot"], horizontal=True)
                         if not quesp_type:
                             all_fields_filled = False
+                        enforce_fb = st.toggle('Enforce fixed proton volume fraction?', help = "Can be used for phantoms with known solute concentrations. Assumes 55.5M water.")
+                        if enforce_fb:
+                            fixed_conc = st.number_input(
+                            label='Input solute concentration (mM)',
+                            min_value=0.0,
+                            value=50.0,
+                            format="%.2f")
+                            labile_protons = st.number_input(
+                            label='Input number of labile protons',
+                            min_value=0, 
+                            value=2,   
+                            step=1)
+                            fixed_fb = quesp_fitting.calc_proton_volume_fraction(fixed_conc, labile_protons)
                         quesp_full_path = os.path.join(folder_path, quesp_path)
                         t1_full_path = os.path.join(folder_path, t1_path)
                         quesp_folder_exists = os.path.isdir(quesp_full_path)
@@ -425,6 +439,7 @@ def do_data_submission():
                             st.session_state.submitted_data['quesp_path'] = quesp_path
                             st.session_state.submitted_data['t1_path'] = t1_path
                             st.session_state.submitted_data['quesp_type'] = quesp_type
+                            st.session_state.submitted_data['fixed_fb'] = fixed_fb
                         st.rerun()
             else:
                 if not all_fields_filled:
@@ -556,7 +571,7 @@ def do_processing_pipeline():
                         corrected = load_study.thermal_drift({"imgs": oriented, "offsets": recon['offsets']})
                         st.session_state.processed_data[exp_type] = corrected
                     elif 'powers' in recon: # QUESP
-                        corrected = load_study.process_quesp({"imgs": oriented, "powers": recon['powers'], "times": recon['times'], "offsets": recon['offsets']})
+                        corrected = load_study.process_quesp({"imgs": oriented, "powers": recon['powers'], "tsats": recon['tsats'], "trec": recon['trec'], "offsets": recon['offsets']})
                         st.session_state.processed_data[exp_type] = corrected
                     else: # DAMB1
                         st.session_state.processed_data[exp_type] = {"imgs": oriented, "nominal_flip": recon['nominal_flip']}
@@ -631,7 +646,7 @@ def do_processing_pipeline():
             if "quesp" in selection:
                 t1_fits = quesp_fitting.fit_t1_map(st.session_state.recon_data['t1'], masks)
                 st.session_state.fits['t1'] = t1_fits
-                st.session_state.fits['quesp'] = quesp_fitting.fit_quesp_map(st.session_state.processed_data['quesp'], t1_fits, masks, submitted.get('quesp_type'))
+                st.session_state.fits['quesp'] = quesp_fitting.fit_quesp_map(st.session_state.processed_data['quesp'], t1_fits, masks, submitted.get('quesp_type'), submitted.get('fixed_fb'))
             
             if "wassr" in selection:
                 proc_data = st.session_state.processed_data['wassr']

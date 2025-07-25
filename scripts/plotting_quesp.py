@@ -203,7 +203,10 @@ def calculate_quesp_stats(quesp_fits, t1_fits):
             else:
                 kb_mean, kb_std = np.nan, np.nan
 
-            r2_mean = np.nanmean(params['r2_values'])
+            r2_values = np.array(params['r2_values'])
+            r2_p5, r2_p95 = np.percentile(r2_values, [5, 95])
+            r2_filtered = r2_values[(r2_values >= r2_p5) & (r2_values <= r2_p95)]
+            r2_mean = np.mean(r2_filtered)
 
             stats_list.append({
                 'ROI': roi_label,

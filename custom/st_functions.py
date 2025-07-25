@@ -4,6 +4,8 @@
 Created on Wed Jan  8 10:36:34 2025
 
 @author: jonah
+
+Credit for all cat photos goes to Clara Flynn.
 """
 
 import streamlit as st
