@@ -17,7 +17,6 @@ def generate_dictionary(cfg):
 	with st.spinner("Generating CEST-MRF dictionary. This may take quite some time..."):
 		_ = generate_mrf_cest_dictionary(seq_fn=cfg['seq_fn'], param_fn=cfg['yaml_fn'], dict_fn=cfg['dict_fn'], num_workers=cfg['num_workers'], axes='xy')
 
-
 def write_yaml(cfg):
 	"""
     Writes the configuration dictionary to a YAML file using the path from the config.
@@ -101,12 +100,12 @@ def write_sequence(seq_defs, seq_fn, cfg):
 				seq.add_block(sat_pulse)
 			if n_p < seq_defs['n_pulses'] - 1:
 				seq.add_block(pp.make_delay(seq_defs['td']))
-    # Add acq block
-	seq.add_block(exc_pulse)
-	seq.add_block(imaging_delay)
-	pseudo_adc = pp.make_adc(1, duration=1e-3)
-	seq.add_block(pseudo_adc)
-	# Add defs to seq
+	    # Add acq block
+		seq.add_block(exc_pulse)
+		seq.add_block(imaging_delay)
+		pseudo_adc = pp.make_adc(1, duration=1e-3)
+		seq.add_block(pseudo_adc)
+		# Add defs to seq
 	def_fields = seq_defs.keys()
 	for field in def_fields:
 		seq.set_definition(field, seq_defs[field])

@@ -10,7 +10,7 @@ import numpy as np
 
 # ## Scanner parameters
 B0 = 7 # T
-gamma = 267.5153 # rad/s/T
+gamma = 267.5153 
 b0_inhom = 0 # B0 inhomogeneity
 rel_b1 = 1 # Relative B1
 
