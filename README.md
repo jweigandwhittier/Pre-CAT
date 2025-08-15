@@ -2,7 +2,7 @@
 
 ## Welcome to Pre-CAT 
 
-**Pre-CAT** is a preclinical CEST-MRI data analysis toolbox and Streamlit webapp. **Pre-CAT** was originally designed for processing cardiac and abdominal CEST acquisitions using the radial FLASH sequence described by Weigand-Whittier et al., but has been expanded for use with all ParaVision 6/7 CEST acqisitions.
+**Pre-CAT** is a preclinical CEST-MRI data analysis toolbox and Streamlit webapp. **Pre-CAT** was originally designed for processing cardiac and abdominal CEST acquisitions using the radial FLASH sequence described by Weigand-Whittier et al., but has been expanded for use with all ParaVision 6/7 CEST acquisitions.
 
 > ⚠ **Note:**  
 > **Pre-CAT** scripts rely on ParaVision method files with specific variable names. **Pre-CAT** is guaranteed to work with the cestsegCSUTE sequence, and should work with any CEST sequence based on the PV 6/7 MT module. **Pre-CAT** will *not* work with PV 360 acquisitions using the new CEST module. This may change in the future.
