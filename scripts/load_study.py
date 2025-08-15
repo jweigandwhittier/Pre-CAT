@@ -38,7 +38,10 @@ def recon_bruker(num, directory):
     Loads CEST data from Bruker processed image data.
     """
     data = bruker.ReadExperiment(directory, num)
-    offsets = np.round(data.method["Cest_Offsets"]/data.method["PVM_FrqWork"][0],1)
+    try:
+        offsets = np.round(data.method["Cest_Offsets"] / data.method["PVM_FrqWork"][0], 1)
+    except KeyError:
+        offsets = None # This handles the CEST-MRF case
     imgs = data.proc_data
     visu = data.visu
     # Flips data to match raw (NU)FFT reconstruction, this DOES NOT ALWAYS WORK (return to this)

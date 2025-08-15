@@ -16,7 +16,7 @@ from pathlib import Path
 import streamlit as st
 # Local application imports
 from scripts import load_study, pre_processing, draw_rois, cest_fitting, quesp_fitting, plotting, plotting_quesp, plotting_wassr, plotting_damb1, BrukerMRI
-from scripts.mrf_scripts import load_mrf, parse_config
+from scripts.mrf_scripts import load_mrf, parse_config, mrf_fitting, plotting_mrf
 from custom import st_functions
 
 # --- Constants for app setup --- #
@@ -584,8 +584,8 @@ def do_processing_pipeline():
             load_mrf.write_yaml(submitted['mrf_config'])
             load_mrf.seq_from_method(submitted['mrf_path'], submitted['folder_path'], submitted['mrf_config'])
             load_mrf.generate_dictionary(submitted['mrf_config'])
-            return
         st.session_state.pipeline_status['mrf_gen_done'] = True
+        st.rerun()
 
     # --- Stage 1: Reconstruction --- #
     # Reconstruct all selected data types if they haven't been already.
@@ -647,6 +647,8 @@ def do_processing_pipeline():
                 if exp_type == "quesp":
                     st.session_state.recon_data['quesp'] = load_study.recon_quesp(submitted['quesp_path'], submitted['folder_path'])
                     st.session_state.recon_data['t1'] = load_study.recon_t1map(submitted['t1_path'], submitted['folder_path'])
+                if exp_type == "cest-mrf":
+                    st.session_state.recon_data['cest-mrf'] = load_study.recon_bruker(submitted['mrf_path'], submitted['folder_path'])
             st.session_state.pipeline_status['recon_done'] = True
             st_functions.message_logging("All reconstruction complete!")
             st.rerun()
@@ -660,6 +662,8 @@ def do_processing_pipeline():
             rectilinear_exps.append('damb1')
         if 'quesp' in st.session_state.recon_data:
             rectilinear_exps.append('quesp')
+        if 'cest-mrf' in st.session_state.recon_data:
+            rectilinear_exps.append('cest-mrf')
         # Orient radial group
         if radial_exps and st.session_state.orientation_params.get('radial') is None:
             primary_exp = radial_exps[0] # Orient using the first radial experiment
@@ -692,14 +696,18 @@ def do_processing_pipeline():
             for exp_type in selection:
                 if exp_type in selection:
                     # Determine which orientation params to use
-                    orientation_type = 'rectilinear' if exp_type in ['damb1', 'quesp'] or submitted.get(f'{exp_type}_type') == 'Rectilinear' else 'radial'
+                    orientation_type = 'rectilinear' if exp_type in ['damb1', 'quesp', 'cest-mrf'] or submitted.get(f'{exp_type}_type') == 'Rectilinear' else 'radial'
                     k, flip = st.session_state.orientation_params[orientation_type]
                     recon = st.session_state.recon_data[exp_type]
                     oriented = load_study.rotate_image_stack(recon['imgs'], k)
                     if flip:
                         oriented = load_study.flip_image_stack_vertically(oriented)
                     # Apply further corrections
-                    if 'offsets' in recon and 'powers' not in recon: # CEST/WASSR
+                    if exp_type == 'cest-mrf':
+                        processed_mrf = recon.copy()
+                        processed_mrf['imgs'] = oriented
+                        st.session_state.processed_data[exp_type] = processed_mrf
+                    elif 'offsets' in recon and 'powers' not in recon: # CEST/WASSR
                         corrected = load_study.thermal_drift({"imgs": oriented, "offsets": recon['offsets']})
                         st.session_state.processed_data[exp_type] = corrected
                     elif 'powers' in recon: # QUESP
@@ -791,6 +799,10 @@ def do_processing_pipeline():
                 proc_data = st.session_state.processed_data['damb1']
                 st.session_state.fits['damb1'] = cest_fitting.fit_b1(proc_data['imgs'], proc_data['nominal_flip'])
 
+            if "cest-mrf" in selection:
+                if st.session_state.submitted_data['mrf_method'] == 'Dot product':
+                    st.session_state.fits['cest-mrf'] = mrf_fitting.mrf_dot_prod(st.session_state.submitted_data['mrf_config']['dict_fn'], st.session_state.processed_data['cest-mrf']['imgs'], masks)
+
             st_functions.message_logging("All processing complete!")
             st.session_state.pipeline_status['fitting_done'] = True
             st.session_state.is_processed = True
@@ -835,6 +847,13 @@ def display_results():
         stats_df = plotting_quesp.calculate_quesp_stats(st.session_state.fits['quesp'], st.session_state.fits['t1'], quespmin, quespmax)
         st.dataframe(stats_df.style.format("{:.4f}"))
         st_functions.save_df_to_csv(stats_df, save_path)
+
+    if "CEST-MRF" in submitted['selection']:
+        st.header('CEST-MRF Results')
+        reference_image = st.session_state.processed_data['cest-mrf']['imgs'][:, :, 0]
+        mrf_results = st.session_state.fits.get('cest-mrf')
+        if mrf_results:
+            plotting_mrf.plot_mrf_maps(mrf_results, reference_image)
 
     if "WASSR" in submitted['selection']:
         st.header('WASSR Results')

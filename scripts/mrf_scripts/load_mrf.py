@@ -13,9 +13,15 @@ import streamlit as st
 from custom import st_functions
 
 def generate_dictionary(cfg):
+	"""
+	Generate MRF dictionary.
+	"""
 	from cest_mrf.dictionary.generation import generate_mrf_cest_dictionary
 	with st.spinner("Generating CEST-MRF dictionary. This may take quite some time..."):
 		_ = generate_mrf_cest_dictionary(seq_fn=cfg['seq_fn'], param_fn=cfg['yaml_fn'], dict_fn=cfg['dict_fn'], num_workers=cfg['num_workers'], axes='xy')
+	full_path = cfg['dict_fn']
+	st.success(f"Dictionary saved to: {full_path}")
+	st_functions.message_logging(f"Dictionary saved to: {full_path}")
 
 def write_yaml(cfg):
 	"""

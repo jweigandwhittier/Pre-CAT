@@ -24,19 +24,20 @@ pool_b_dw = 2.0  # Chemical shift of the CEST pool in [ppm]
 pool_b_t1 = 2.5  # (s) 
 pool_b_t2 = 1e-3  # (s)
 pool_b_num_exchangeable_protons = 4.0  # Number of exchangeable solute protons
-pool_b_concentration = np.arange(2.0, 100.0 + 2.0, 2.0)  # Solute concentration (mM)
+pool_b_concentration = np.arange(2.0, 80.0 + 2.0, 2.0)  # Solute concentration (mM)
 k_b = np.arange(100.0, 500.0 + 5.0, 5.0)  # Solute chemical exchange rate (s^-1)
 # Proton fraction can be defined directly OR calculated from concentration
 f_b = pool_b_num_exchangeable_protons * pool_b_concentration / 111e3  # Proton fraction [0,1]
 
 # ## MT pool (c)
-pool_c_name = 'MT'
-pool_c_dw = -2.5  # Chemical shift of the CEST pool in [ppm]
-pool_c_t1 = 2.5  # (s) 
-pool_c_t2 = 40e-6  # (s)
-k_c = np.arange(1.0, 50.0 + 0.5, 0.5)
+# Commented out for now, add back if you need an MT pool
+#pool_c_name = 'MT'
+#pool_c_dw = -2.5  # Chemical shift of the CEST pool in [ppm]
+#pool_c_t1 = 2.5  # (s) 
+#pool_c_t2 = 40e-6  # (s)
+#k_c = np.arange(1.0, 50.0 + 0.5, 0.5)
 # Proton fraction can be defined directly OR calculated from concentration
-f_c = np.arange(0, 0.5 + 0.01, 0.01)  # Proton fraction [0,1]
+#f_c = np.arange(0, 0.5 + 0.01, 0.01)  # Proton fraction [0,1]
 
 # ## Simulation settings
 num_workers = 4 # Number of CPU cores to use
