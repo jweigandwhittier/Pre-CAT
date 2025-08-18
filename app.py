@@ -854,7 +854,6 @@ def display_results():
         st.header('CEST-MRF Results')
         reference_image = st.session_state.processed_data['cest-mrf']['imgs'][:, :, 0]
         mrf_results = st.session_state.fits.get('cest-mrf')
-        st.write(st.session_state.submitted_data['proton_params'])
         if mrf_results:
             plotting_mrf.plot_mrf_maps(mrf_results, reference_image, st.session_state.submitted_data['proton_params'])
 

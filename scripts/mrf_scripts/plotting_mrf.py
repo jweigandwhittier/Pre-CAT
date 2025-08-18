@@ -24,8 +24,6 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
             composite_map += mrf_results_by_roi[roi_name][key]
         combined_maps[key] = composite_map
 
-    st.write(combined_maps)
-
     if proton_params and 'pool_b_num_exchangeable_protons' in proton_params and 'fs' in combined_maps:
         num_protons = proton_params['pool_b_num_exchangeable_protons']
         if num_protons > 0:
