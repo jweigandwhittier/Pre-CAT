@@ -42,10 +42,10 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
         'concentration': {'name': 'Concentration', 'unit': 'mM', 'cmap': 'viridis'},
         'ksw': {'name': 'Exchange Rate (ksw)', 'unit': 'Hz', 'cmap': 'magma'},
         't1w': {'name': 'T1 (Water)', 'unit': 's', 'cmap': 'plasma'},
-        't2w': {'name': 'T2 (Water)', 'unit': 's', 'cmap': 'plasma'},
+        't2w': {'name': 'T2 (Water)', 'unit': 'ms', 'cmap': 'plasma'},
         'dp':  {'name': 'Dot Product', 'unit': 'a.u.', 'cmap': 'magma'},
         't1s': {'name': 'T1 (Solute)', 'unit': 's', 'cmap': 'plasma'},
-        't2s': {'name': 'T2 (Solute)', 'unit': 's', 'cmap': 'plasma'},
+        't2s': {'name': 'T2 (Solute)', 'unit': 'ms', 'cmap': 'plasma'},
     }
 
     plot_keys = [k for k in param_details.keys() if k in combined_maps]
@@ -56,6 +56,10 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
             fig, ax = plt.subplots(figsize=(6, 5))
 
             q_map = combined_maps[key]
+            # Convert T2 maps from seconds to milliseconds
+            if key in ['t2w', 't2s']:
+                q_map = q_map * 1000
+                
             masked_q_map = np.ma.masked_where(q_map == 0, q_map)
             
             ax.imshow(reference_image, cmap='gray')
