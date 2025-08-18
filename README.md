@@ -53,10 +53,10 @@ Please add [**Pre-CAT**] to the subject line of your email.
 
 ## Citation
 
-Please cite the associated publications when using Pre-CAT:
+**Please cite the associated publications when using Pre-CAT:**
 
-Weigand-Whittier J., Wendland M., Lam B., et al. Ungated, plug‐and‐play preclinical cardiac CEST‐MRI using radial FLASH with segmented saturation. Magn Reson Med (2025). https://doi.org/10.1002/mrm.30382
+Weigand-Whittier J., Wendland M., Lam B., et al. *Ungated, plug‐and‐play preclinical cardiac CEST‐MRI using radial FLASH with segmented saturation.* Magn Reson Med (2025). https://doi.org/10.1002/mrm.30382
 
-If you are using CEST-MRF analysis features, please also cite:
+**If you are using CEST-MRF analysis features, please also cite:**
 
-Vladimirov N., Cohen O., Heo H.Y., et al. Quantitative molecular imaging using deep magnetic resonance fingerprinting. Nat Protoc (2025). https://doi.org/10.1038/s41596-025-01152-w
+Vladimirov N., Cohen O., Heo H.Y., et al. *Quantitative molecular imaging using deep magnetic resonance fingerprinting.* Nat Protoc (2025). https://doi.org/10.1038/s41596-025-01152-w
