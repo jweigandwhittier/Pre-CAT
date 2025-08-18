@@ -856,6 +856,14 @@ def display_results():
         mrf_results = st.session_state.fits.get('cest-mrf')
         if mrf_results:
             plotting_mrf.plot_mrf_maps(mrf_results, reference_image, st.session_state.submitted_data['proton_params'])
+        stats_df = plotting_mrf.calculate_mrf_stats(
+            mrf_results,
+            proton_params=st.session_state.submitted_data.get('proton_params')
+        )
+        if stats_df is not None and not stats_df.empty:
+            st.dataframe(stats_df.style.format("{:.2f}"))
+        else:
+            st.info("No statistics to display.")
 
     if "WASSR" in submitted['selection']:
         st.header('WASSR Results')
