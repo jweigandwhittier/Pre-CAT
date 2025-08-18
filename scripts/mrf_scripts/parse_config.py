@@ -69,3 +69,32 @@ def build_config_from_file(config_path):
     config['num_workers'] = getattr(user_config, 'num_workers', 18)
 
     return config
+
+def get_proton_params(config_path):
+    """
+    Loads a user-defined config file and extracts the number of 
+    exchangeable protons for each solute pool, if defined.
+    
+    Returns a separate dictionary with just these parameters.
+    """
+    proton_params = {}
+    try:
+        # Dynamically load the user's config file as a module
+        # Use a unique name to avoid module caching issues
+        spec = importlib.util.spec_from_file_location("user_config_protons", config_path)
+        user_config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(user_config)
+    except Exception as e:
+        # Fail gracefully if the file can't be read
+        print(f"Could not read config file to check for proton params: {e}")
+        return proton_params
+
+    # Check for Pool B's exchangeable protons
+    if hasattr(user_config, 'pool_b_num_exchangeable_protons'):
+        proton_params['pool_b_num_exchangeable_protons'] = float(getattr(user_config, 'pool_b_num_exchangeable_protons'))
+        
+    # Optional: Also check for Pool C's protons
+    if hasattr(user_config, 'pool_c_num_exchangeable_protons'):
+        proton_params['pool_c_num_exchangeable_protons'] = float(getattr(user_config, 'pool_c_num_exchangeable_protons'))
+            
+    return proton_params

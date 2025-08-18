@@ -422,6 +422,7 @@ def do_data_submission():
                                     else:
                                         try:
                                             config = parse_config.build_config_from_file(config_path)
+                                            proton_params = parse_config.get_proton_params(config_path)
                                             dict_methods = ['Dot product', 'Deep learning']
                                             mrf_method = st.pills("Dictionary matching method", dict_methods, default='Dot product')
                                             if mrf_method == 'Deep learning':
@@ -551,6 +552,7 @@ def do_data_submission():
                         if "CEST-MRF" in selection:
                             st.session_state.submitted_data['mrf_path'] = mrf_path
                             st.session_state.submitted_data['mrf_config'] = config
+                            st.session_state.submitted_data['proton_params'] = proton_params
                             st.session_state.submitted_data['mrf_method'] = mrf_method
                         st.rerun()
             else:
@@ -852,8 +854,9 @@ def display_results():
         st.header('CEST-MRF Results')
         reference_image = st.session_state.processed_data['cest-mrf']['imgs'][:, :, 0]
         mrf_results = st.session_state.fits.get('cest-mrf')
+        st.write(st.session_state.submitted_data['proton_params'])
         if mrf_results:
-            plotting_mrf.plot_mrf_maps(mrf_results, reference_image)
+            plotting_mrf.plot_mrf_maps(mrf_results, reference_image, st.session_state.submitted_data['proton_params'])
 
     if "WASSR" in submitted['selection']:
         st.header('WASSR Results')

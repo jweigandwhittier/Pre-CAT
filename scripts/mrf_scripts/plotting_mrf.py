@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_mrf_maps(mrf_results_by_roi, reference_image):
+def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
     """
     Displays CEST-MRF quantitative maps in Streamlit tabs.
 
@@ -13,35 +13,41 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image):
         st.warning("No MRF results found to display.")
         return
 
-    # --- 1. Combine maps from all ROIs into single composite maps ---
-    # Get the keys for the maps (e.g., 't1w', 't2w') from the first ROI
+    # --- 1. Combine maps from all ROIs ---
     map_keys = list(next(iter(mrf_results_by_roi.values())).keys())
     
     combined_maps = {}
     for key in map_keys:
-        # Initialize a zero-filled array with the correct shape
         first_map = next(iter(mrf_results_by_roi.values()))[key]
         composite_map = np.zeros_like(first_map)
-        # Add the maps from each ROI together
         for roi_name in mrf_results_by_roi:
             composite_map += mrf_results_by_roi[roi_name][key]
         combined_maps[key] = composite_map
 
+    st.write(combined_maps)
+
+    if proton_params and 'pool_b_num_exchangeable_protons' in proton_params and 'fs' in combined_maps:
+        num_protons = proton_params['pool_b_num_exchangeable_protons']
+        if num_protons > 0:
+            concentration_map = (combined_maps['fs'] * 111000) / num_protons
+            del combined_maps['fs']
+            combined_maps['concentration'] = concentration_map
+            st.info("Displaying calculated solute concentration.")
+
     # --- 2. Create the UI and Plot ---
     st.header("CEST-MRF Quantitative Maps")
 
-    # Define nice names and units for plotting
     param_details = {
-        't1w': {'name': 'T1 (Water)', 'unit': 's'},
-        't2w': {'name': 'T2 (Water)', 'unit': 's'},
-        'ksw': {'name': 'Exchange Rate (ksw)', 'unit': 'Hz'},
-        'fs': {'name': 'Solute Fraction (fs)', 'unit': 'a.u.'},
-        'dp': {'name': 'Dot Product', 'unit': 'a.u.'},
-        't1s': {'name': 'T1 (Solute)', 'unit': 's'},
-        't2s': {'name': 'T2 (Solute)', 'unit': 's'},
+        'fs':  {'name': 'Solute Fraction (fs)', 'unit': 'a.u.', 'cmap': 'viridis'},
+        'concentration': {'name': 'Concentration', 'unit': 'mM', 'cmap': 'viridis'},
+        'ksw': {'name': 'Exchange Rate (ksw)', 'unit': 'Hz', 'cmap': 'magma'},
+        't1w': {'name': 'T1 (Water)', 'unit': 's', 'cmap': 'plasma'},
+        't2w': {'name': 'T2 (Water)', 'unit': 's', 'cmap': 'plasma'},
+        'dp':  {'name': 'Dot Product', 'unit': 'a.u.', 'cmap': 'magma'},
+        't1s': {'name': 'T1 (Solute)', 'unit': 's', 'cmap': 'plasma'},
+        't2s': {'name': 'T2 (Solute)', 'unit': 's', 'cmap': 'plasma'},
     }
 
-    # Filter for keys that exist in our results and create tabs
     plot_keys = [k for k in param_details.keys() if k in combined_maps]
     tabs = st.tabs([param_details[key]['name'] for key in plot_keys])
 
@@ -50,17 +56,13 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image):
             fig, ax = plt.subplots(figsize=(6, 5))
 
             q_map = combined_maps[key]
-            
-            # Mask out the zero values so they become transparent in the plot
             masked_q_map = np.ma.masked_where(q_map == 0, q_map)
             
-            # Display the grayscale reference image as the background
             ax.imshow(reference_image, cmap='gray')
             
-            # Overlay the colorful quantitative map with some transparency
-            im = ax.imshow(masked_q_map, cmap='viridis', alpha=0.8)
+            colormap = param_details[key]['cmap']
+            im = ax.imshow(masked_q_map, cmap=colormap, alpha=0.8)
             
-            # Add a colorbar
             cbar = fig.colorbar(im, ax=ax, shrink=0.8)
             cbar.set_label(f"{param_details[key]['name']} ({param_details[key]['unit']})")
             

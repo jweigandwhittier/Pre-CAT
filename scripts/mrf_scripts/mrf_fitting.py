@@ -10,7 +10,6 @@ def mrf_dot_prod(dict_path, image_stack, roi_masks):
     dictionary = sio.loadmat(dict_path)
     results_by_roi = {}
 
-    # --- >> NEW: Create Streamlit elements for progress tracking << ---
     st.write("Performing MRF dot-product matching...")
     status_text = st.empty()
     progress_bar = st.progress(0)
@@ -29,93 +28,81 @@ def mrf_dot_prod(dict_path, image_stack, roi_masks):
         )
         results_by_roi[roi_name] = quantitative_maps
         
-    # --- >> NEW: Finalize the status display << ---
     status_text.text("Fitting complete!")
     progress_bar.progress(100)
     
     return results_by_roi
 
 
+import numpy as np
+import numpy.linalg as la
+
 def dot_prod_matching_roi(dictionary, image_stack, roi_mask, batch_size=256, progress_bar=None, status_text=None):
     """
-    Performs dot-product matching on pixels within a specified ROI.
-    Corrected for image stacks with shape (rows, cols, n_iter).
+    Performs a full MRF matching workflow by combining the correct matching logic
+    with robust dictionary parsing and parameter lookup.
     """
-    # --- [Section 1: No changes needed here] ---
-    # ... (dictionary parsing logic is unaffected)
-    synt_dict = dictionary
-    if len(synt_dict.keys()) < 4:
-        for k in synt_dict.keys():
-            if k[0] != '_':
-                key = k
-        synt_dict = synt_dict[key][0]
-        dict_t1w = synt_dict['t1w'][0].transpose()
-        dict_t2w = synt_dict['t2w'][0].transpose()
-        dict_t1s = synt_dict['t1s'][0].transpose()
-        dict_t2s = synt_dict['t2s'][0].transpose()
-        dict_fs = synt_dict['fs'][0].transpose()
-        dict_ksw = synt_dict['ksw'][0].transpose()
-        synt_sig = synt_dict['sig'][0]
-    else:
-        dict_t1w = synt_dict['t1w']
-        dict_t2w = synt_dict['t2w']
-        dict_t1s = synt_dict['t1s_0']
-        dict_t2s = synt_dict['t2s_0']
-        dict_fs = synt_dict['fs_0']
-        dict_ksw = synt_dict['ksw_0']
-        synt_sig = np.transpose(synt_dict['sig'])
-
-    # --- 2. Select and Reshape Data from the ROI (Corrected) ---
-    # Unpack dimensions according to the (rows, cols, n_iter) format
-    rows, cols, n_iter = image_stack.shape
+    # --- 1. Robustly Parse the Dictionary (from our diagnosis) ---
+    param_key_map = {
+        't1w': ['t1w'], 't2w': ['t2w'], 't1s': ['t1s_0', 't1s'],
+        't2s': ['t2s_0', 't2s'], 'fs':  ['fs_0', 'fs', 'f'], 'ksw': ['ksw_0', 'ksw'],
+    }
+    param_vectors = {}
+    for name, keys in param_key_map.items():
+        for key in keys:
+            if key in dictionary:
+                param_vectors[name] = dictionary[key].flatten()
+                break
     
-    # -->> THE FIX: Correctly index with the mask and transpose the result <<--
-    # This creates a 2D array of shape (n_iter, n_roi_pixels)
-    data = image_stack[roi_mask].T
+    synt_sig = dictionary['sig'].T # Transpose to get shape (iters, entries)
+
+    # --- 2. Prepare Acquired Data (adapting to Pre-CAT's format) ---
+    # Your original code assumes (iters, H, W). Pre-CAT gives us (H, W, iters).
+    # We transpose the axes to match the required input format.
+    img_stack_transposed = np.transpose(image_stack, (2, 0, 1)) # New shape: (iters, H, W)
+    n_iter, rows, cols = img_stack_transposed.shape
+
+    # Use the ROI mask to select and reshape data
+    data = img_stack_transposed[:, roi_mask]
     n_roi_pixels = data.shape[1]
-    
-    if n_roi_pixels == 0:
-        print("Warning: The provided ROI mask is empty. Returning empty maps.")
-        return {key: np.zeros((rows, cols)) for key in ['dp', 't1w', 't2w', 'fs', 'ksw', 't1s', 't2s']}
 
-    # --- [Sections 3, 4, 5, and 6: No other changes needed] ---
-    # The rest of the function works correctly with the properly shaped 'data' array.
-    dp = np.zeros(n_roi_pixels)
-    t1w = np.zeros(n_roi_pixels)
-    t2w = np.zeros(n_roi_pixels)
-    t1s = np.zeros(n_roi_pixels)
-    t2s = np.zeros(n_roi_pixels)
-    fs = np.zeros(n_roi_pixels)
-    ksw = np.zeros(n_roi_pixels)
+    if n_roi_pixels == 0:
+        return {}
+
+    # --- 3. Normalize Signals (using L2-Norm from your working code) ---
     norm_dict = synt_sig / (la.norm(synt_sig, axis=0) + 1e-10)
     norm_data = data / (la.norm(data, axis=0) + 1e-10)
-
+    
+    # --- 4. Perform Matching in Batches ---
+    results_1d = {key: np.zeros(n_roi_pixels) for key in param_vectors.keys()}
+    results_1d['dp'] = np.zeros(n_roi_pixels)
+    
+    # The batch loop and matching logic are taken directly from your dot_prod_indexes function.
     for i in range(0, n_roi_pixels, batch_size):
         batch_end = min(i + batch_size, n_roi_pixels)
         batch_data = norm_data[:, i:batch_end]
         
-        current_score = np.dot(batch_data.T, norm_dict)
+        # This matrix multiplication correctly calculates all scores for the batch.
+        current_score = batch_data.T @ norm_dict
+        
+        # Argmax correctly finds the index of the best match for each pixel.
         dp_ind = np.argmax(current_score, axis=1)
         
-        dp[i:batch_end] = np.max(current_score, axis=1)
-        t1w[i:batch_end] = dict_t1w[0, dp_ind]
-        t2w[i:batch_end] = dict_t2w[0, dp_ind]
-        t1s[i:batch_end] = dict_t1s[0, dp_ind]
-        t2s[i:batch_end] = dict_t2s[0, dp_ind]
-        fs[i:batch_end] = dict_fs[0, dp_ind]
-        ksw[i:batch_end] = dict_ksw[0, dp_ind]
+        results_1d['dp'][i:batch_end] = np.max(current_score, axis=1)
         
-        if progress_bar is not None:
-            progress_percent = batch_end / n_roi_pixels
-            progress_bar.progress(int(progress_percent * 100))
-        if status_text is not None:
-            status_text.text(f"Processing batch... {batch_end}/{n_roi_pixels} pixels ({int(progress_percent * 100)}%)")
-
+        # --- 5. Perform the Parameter Lookup (The Fixed Step) ---
+        # This now works because param_vectors are correctly parsed 1D arrays.
+        for key, vec in param_vectors.items():
+            results_1d[key][i:batch_end] = vec[dp_ind]
+            
+        if progress_bar: progress_bar.progress(int((batch_end / n_roi_pixels) * 100))
+        if status_text: status_text.text(f"Processing batch... {batch_end}/{n_roi_pixels} pixels")
+            
+    # --- 6. Reshape Results into 2D Maps ---
     quant_maps = {}
-    results = {'dp': dp, 't1w': t1w, 't2w': t2w, 'fs': fs, 'ksw': ksw, 't1s': t1s, 't2s': t2s}
-    for key, values in results.items():
+    for key, values in results_1d.items():
         map_image = np.zeros((rows, cols))
         map_image[roi_mask] = values
         quant_maps[key] = map_image
-
+        
     return quant_maps
