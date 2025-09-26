@@ -47,9 +47,9 @@ num_workers = 4 # Number of CPU cores to use
 # ====================================================================
 
 # ## Filenames for the sequence and dictionary output
-yaml_fn = 'configs/scenario.yaml'
-seq_fn = 'configs/acq_protocol.seq'
-dict_fn = 'configs/dict.mat'
+yaml_fn = 'configs/mrf/scenario.yaml'
+seq_fn = 'configs/mrf/acq_protocol.seq'
+dict_fn = 'configs/mrf/dict.mat'
 
 # ## Other fixed parameters
 scale = 1

@@ -43,12 +43,12 @@ def recon_bruker(num, directory):
     except KeyError:
         offsets = None # This handles the CEST-MRF case
     imgs = data.proc_data
-    visu = data.visu
+    #visu = data.visu
     # Flips data to match raw (NU)FFT reconstruction, this DOES NOT ALWAYS WORK (return to this)
-    orientation = np.array(visu['VisuCoreOrientation'].reshape(3,3))
-    flip_y = orientation[0, 1] < 0 
-    if flip_y == True:
-        imgs = np.flip(imgs, axis=1)
+    #orientation = np.array(visu['VisuCoreOrientation'].reshape(3,3))
+    #flip_y = orientation[0, 1] < 0 
+    #if flip_y == True:
+        #imgs = np.flip(imgs, axis=1)
     # End flipping
     study = {"imgs": imgs, "offsets": offsets}
     return study
@@ -163,13 +163,13 @@ def recon_damb1(directory, theta_path, two_theta_path):
     exp_two_theta = bruker.ReadExperiment(directory, two_theta_path)
     theta = np.squeeze(exp_theta.proc_data)
     two_theta = np.squeeze(exp_two_theta.proc_data)
-    visu = exp_theta.visu
+    #visu = exp_theta.visu
     flip = exp_theta.acqp['ACQ_flip_angle']
-    orientation = np.array(visu['VisuCoreOrientation'].reshape(3,3))
-    flip_y = orientation[0, 1] < 0
-    if flip_y == True:
-        theta = np.flip(theta, axis=1)
-        two_theta = np.flip(two_theta, axis=1)
+    #orientation = np.array(visu['VisuCoreOrientation'].reshape(3,3))
+    #flip_y = orientation[0, 1] < 0
+    #if flip_y == True:
+        #theta = np.flip(theta, axis=1)
+        #two_theta = np.flip(two_theta, axis=1)
     imgs = np.stack([theta, two_theta], axis=-1)
     study = {"imgs": imgs, "nominal_flip": flip}
     return study

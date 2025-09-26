@@ -13,6 +13,8 @@
 /open-py-cest-mrf/cest_mrf/sim_lib/_BMCSimulator.cpython-39-darwin.so
 
 # Ignore all files in configs directory
-configs/*
+configs/mrf/*
+configs/sim/*
 # But do NOT ignore example_config.py
-!configs/example_config.py
+!configs/mrf/example_config.py
+!configs/sim/example_config.yaml

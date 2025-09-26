@@ -265,7 +265,7 @@ def ReadExperiment(path, ExpNum):
     data.method = ReadParamFile(path + str(ExpNum) + "/method")
     data.acqp = ReadParamFile(path + str(ExpNum) + "/acqp")
     data.reco = ReadParamFile(path + str(ExpNum) + "/pdata/1/reco")
-    data.visu = ReadParamFile(path + str(ExpNum) + "/visu_pars")
+    #data.visu = ReadParamFile(path + str(ExpNum) + "/visu_pars")
 
     # processed data
     data.proc_data = ReadProcessedData(path + str(ExpNum) + "/pdata/1/2dseq",
