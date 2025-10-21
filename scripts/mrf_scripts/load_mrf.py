@@ -92,7 +92,7 @@ def write_sequence(seq_defs, seq_fn, cfg):
 	# Loop B1s
 	for idx, b1 in enumerate(seq_defs['B1pa']):
 		if idx > 0:
-			delay_duration = np.round(seq_defs['Trec'][idx - 1] - seq_defs['te'], 3)
+			delay_duration = seq_defs['Trec'][idx - 1]
 			seq.add_block(pp.make_delay(delay_duration))
 		# Sat pulse
 		current_offset_hz = seq_defs['offsets_hz'][idx]

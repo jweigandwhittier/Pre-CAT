@@ -336,7 +336,6 @@ def do_data_submission():
                     if os.path.isdir(cest_full_path):
                         if cest_type == "Rectilinear" and "traj" in os.listdir(cest_full_path):
                             st.warning("The presence of a gradient trajectory file suggests the data might be radial. Please verify your acquisition type.")
-                            cest_validation = False
                         missing_items = validate_radial(cest_full_path) if cest_type == "Radial" else validate_rectilinear(cest_full_path)
                         if missing_items:
                             st.error(f"CEST folder is missing the following required items: {', '.join(missing_items)}")
