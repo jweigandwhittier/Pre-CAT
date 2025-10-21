@@ -201,12 +201,16 @@ def thermal_drift(recon_data):
     corrected_images = np.delete(images, ref_index, axis=2)
     if np.size(ref_index) > 1:
         # Interpolation logic
-        step = ref_index[1] - 1
-        ref_offsets = np.concatenate(([corrected_offsets[0]], corrected_offsets[step-1::step], [corrected_offsets[-1]]))
-        points = (np.arange(images.shape[0]), np.arange(images.shape[1]), ref_offsets)
-        xi, yi, fi = np.meshgrid(np.arange(images.shape[0]), np.arange(images.shape[1]), corrected_offsets, indexing='ij')
-        values = np.stack((xi, yi, fi), axis=-1)
-        m0_interp = interpn(points, m0, values)
+        m0_indices = ref_index
+        points = (np.arange(images.shape[0]), np.arange(images.shape[1]), m0_indices)
+        # 2. The query points are the indices of the 'corrected' images
+        all_indices = np.arange(len(offsets))
+        corrected_indices = np.delete(all_indices, ref_index)
+        # 3. Create the meshgrid of query points
+        xi, yi, fi = np.meshgrid(np.arange(images.shape[0]), np.arange(images.shape[1]), corrected_indices, indexing='ij')
+        query_points = np.stack((xi, yi, fi), axis=-1)
+        # 4. Interpolate m0 data at the query points
+        m0_interp = interpn(points, m0, query_points)
         corrected_images = np.nan_to_num(corrected_images / m0_interp)
         return {
             "imgs": corrected_images, "offsets": corrected_offsets,
