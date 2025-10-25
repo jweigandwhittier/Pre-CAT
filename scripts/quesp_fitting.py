@@ -92,7 +92,7 @@ def fit_quesp_map(quesp_data, t1_pixel_fits, masks, fit_type, fixed_fb=None):
     progress_bar = st.progress(0, text="Starting QUESP fitting...")
     fit_counter = 0
 
-    # Prepare data for each chemical pool once to be efficient
+    # Prepare data for each solute pool once to be efficient
     pools_data = {}
     for offset in unique_offsets:
         pool_name = next((pool for pool, off in pool_dict.items() if off == offset), f"{offset} ppm")
@@ -123,11 +123,24 @@ def fit_quesp_map(quesp_data, t1_pixel_fits, masks, fit_type, fixed_fb=None):
         if t1_mean_s: # Proceed only if mean T1 is a valid number
             if fit_type in ['Inverse (MTRrex)', 'Omega Plot']:
                 tsat_s = next(iter(pools_data.values()))['tsat']
+                trecs_s = next(iter(pools_data.values()))['trecs']
+                t1_threshold = 5 * t1_mean_s
+                problematic_trecs = trecs_s[trecs_s < t1_threshold]
+                if problematic_trecs.size > 0:
+                    # Format the list of problematic Trec values for the message
+                    trecs_list_str = ", ".join([f"{t:.2f}" for t in problematic_trecs])
+                    st_functions.message_logging(
+                        f"For **{roi_label}**, spins may not be fully relaxed. "
+                        f"The following recovery time(s) ($T_{{rec}}$) are less than "
+                        f"$5 \\times$ the mean $T_1$ ({t1_mean_s:.2f} s): **{trecs_list_str} s**. "
+                        f"This invalidates the MTRrex and Omega Plot model.",
+                        msg_type='warning'
+                    )
                 if tsat_s < 3 * t1_mean_s:
                     st_functions.message_logging(
                         f"For **{roi_label}**, the steady-state saturation assumption may be invalid. "
                         f"The saturation time ($t_{{sat}}$ = {tsat_s:.2f} s) is less than $3 \\times$ the mean $T_1$ ({t1_mean_s:.2f} s). "
-                        f"This can affect the accuracy of the MTRrex and Omega Plot model.",
+                        f"This can affect the accuracy of the MTRrex and Omega Plot models.",
                         msg_type='warning'
                     )
                 

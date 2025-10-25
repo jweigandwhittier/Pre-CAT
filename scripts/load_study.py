@@ -210,7 +210,18 @@ def thermal_drift(recon_data):
         xi, yi, fi = np.meshgrid(np.arange(images.shape[0]), np.arange(images.shape[1]), corrected_indices, indexing='ij')
         query_points = np.stack((xi, yi, fi), axis=-1)
         # 4. Interpolate m0 data at the query points
-        m0_interp = interpn(points, m0, query_points)
+        try:
+            m0_interp = interpn(points, m0, query_points)
+        except ValueError:
+            st_functions.message_logging(
+                        f"Interpolation failed. Falling back to normalization by single $S_0$ image.",
+                        msg_type='warning'
+                    )
+            corrected_images = np.nan_to_num(corrected_images / m0[:, :, 0][..., np.newaxis])
+            return {
+                "imgs": corrected_images, "offsets": corrected_offsets,
+                "m0": np.squeeze(m0[:, :, 0])
+            }
         corrected_images = np.nan_to_num(corrected_images / m0_interp)
         return {
             "imgs": corrected_images, "offsets": corrected_offsets,

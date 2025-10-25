@@ -43,6 +43,7 @@ p0_creatine = [0.05, 0.5, 2.0]
 p0_amide = [0.05, 1.5, 3.5]
 p0_amine = [0.05, 1.5, 2.5]
 p0_hydroxyl = [0.05, 1.5, 0.6]
+p0_salicylic = [0.05, 1.5, 9.3]
 ##Lower bounds for curve fitting##
 lb_water = [0.02, 0.01, -1e-6]
 lb_mt = [0.0, 30, -2.5]
@@ -52,6 +53,7 @@ lb_creatine = [0.0, 0.5, 1.6]
 lb_amide = [0.0, 0.5, 3.2]
 lb_amine = [0.0, 0.1, 2.2]
 lb_hydroxyl = [0.0, 0.1, 0.4]
+lb_salicylic = [0.0, 0.5, 8.0]
 ##Upper bounds for curve fitting##
 ub_water = [1, 10, 1e-6]
 ub_mt = [0.5, 60, 0]
@@ -61,6 +63,7 @@ ub_creatine = [0.5, 5, 2.6]
 ub_amide = [0.3, 5, 4.0]
 ub_amine = [0.3, 5, 2.8]
 ub_hydroxyl = [0.3, 5, 1.2]
+ub_salicylic = [0.3, 5, 10.0]
 
 ##Combine for curve fitting##
 #Step 1
@@ -148,7 +151,8 @@ def two_step(spectrum, offsets, custom_contrasts = None):
         'Amide': (p0_amide, lb_amide, ub_amide),
         'Amine': (p0_amine, lb_amine, ub_amine),
         'Hydroxyl': (p0_hydroxyl, lb_hydroxyl, ub_hydroxyl),
-        'NOE (-1.6 ppm)': (p0_noe_neg_1_6, lb_noe_neg_1_6, ub_noe_neg_1_6)
+        'NOE (-1.6 ppm)': (p0_noe_neg_1_6, lb_noe_neg_1_6, ub_noe_neg_1_6),
+        'Salicylic acid': (p0_salicylic, lb_salicylic, ub_salicylic)
     }
     p0_2, lb_2, ub_2 = [], [], []
     for contrast in custom_contrasts:
