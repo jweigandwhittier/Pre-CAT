@@ -4,6 +4,13 @@
 Created on Tue Jan  7 12:35:44 2025
 
 @author: jonah
+
+TODO:
+- Add option to upload data as Numpy array or DICOM
+- Add page for quick Cr/PCr analysis (with DICOM upload)
+- Change upload from path to uploading a .ZIP file
+- Change from automatically saving at path to download button
+- Modify saved data (entire session state is very inefficient)
 """
 # --- Imports --- #
 # Standard library imports
