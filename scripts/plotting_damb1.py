@@ -33,52 +33,54 @@ def plot_damb1(b1_fits, reference_image, user_geometry, save_path):
         ax.axis('off')
         st.pyplot(fig)
         plt.savefig(os.path.join(image_path, 'B1_Map_Raw.png'), dpi=300, bbox_inches="tight")
-        return
+        map_to_return = b1_fits
+    else:
+        # If a reference is provided, create a side-by-side comparison
+        zoom_factors = (
+            reference_image.shape[0] / b1_fits.shape[0],
+            reference_image.shape[1] / b1_fits.shape[1]
+        )
+        b1_interp = ndimage.zoom(b1_fits, zoom=zoom_factors, order=1)
+        
+        # Apply mask based on organ type
+        if user_geometry['aha']:
+            combined_mask = user_geometry["masks"]["lv"]
+            y_indices, x_indices = np.where(combined_mask)
+            x_min, x_max = max(np.min(x_indices) - 20, 0), min(np.max(x_indices) + 20, combined_mask.shape[1])
+            y_min, y_max = max(np.min(y_indices) - 20, 0), min(np.max(y_indices) + 20, combined_mask.shape[0])
+        else: # 'Other'
+            combined_mask = np.zeros_like(b1_interp, dtype=bool)
+            for mask in user_geometry['masks'].values():
+                combined_mask |= mask
+            y_min, y_max = 0, b1_interp.shape[0]
+            x_min, x_max = 0, b1_interp.shape[1]
 
-    # If a reference is provided, create a side-by-side comparison
-    zoom_factors = (
-        reference_image.shape[0] / b1_fits.shape[0],
-        reference_image.shape[1] / b1_fits.shape[1]
-    )
-    b1_interp = ndimage.zoom(b1_fits, zoom=zoom_factors, order=1)
-    
-    # Apply mask based on organ type
-    if user_geometry['aha']:
-        combined_mask = user_geometry["masks"]["lv"]
-        y_indices, x_indices = np.where(combined_mask)
-        x_min, x_max = max(np.min(x_indices) - 20, 0), min(np.max(x_indices) + 20, combined_mask.shape[1])
-        y_min, y_max = max(np.min(y_indices) - 20, 0), min(np.max(y_indices) + 20, combined_mask.shape[0])
-    else: # 'Other'
-        combined_mask = np.zeros_like(b1_interp, dtype=bool)
-        for mask in user_geometry['masks'].values():
-            combined_mask |= mask
-        y_min, y_max = 0, b1_interp.shape[0]
-        x_min, x_max = 0, b1_interp.shape[1]
+        transparent_b1 = np.ma.masked_where(~combined_mask, b1_interp)
+        v_abs_max = np.nanmax(np.abs(b1_fits))
+        vmin, vmax = -v_abs_max, v_abs_max
+        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+        fig.suptitle('$B_1$ Map Visualization', fontsize=26, fontname='Arial', weight='bold')
 
-    transparent_b1 = np.ma.masked_where(~combined_mask, b1_interp)
-    v_abs_max = np.nanmax(np.abs(b1_fits))
-    vmin, vmax = -v_abs_max, v_abs_max
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-    fig.suptitle('$B_1$ Map Visualization', fontsize=26, fontname='Arial', weight='bold')
+        axs[0].imshow(b1_fits, cmap='RdBu', vmin=vmin, vmax=vmax)
+        axs[0].set_title('Raw $B_1$', fontsize=20, fontname='Arial', weight='bold')
+        axs[0].axis('off')
 
-    axs[0].imshow(b1_fits, cmap='RdBu', vmin=vmin, vmax=vmax)
-    axs[0].set_title('Raw $B_1$', fontsize=20, fontname='Arial', weight='bold')
-    axs[0].axis('off')
+        axs[1].imshow(reference_image[y_min:y_max, x_min:x_max], cmap='gray')
+        im1 = axs[1].imshow(transparent_b1[y_min:y_max, x_min:x_max], cmap='RdBu', alpha=0.9, vmin=vmin, vmax=vmax)
+        axs[1].set_title('Interpolated on Reference', fontsize=20, fontname='Arial', weight='bold')
+        axs[1].axis('off')
 
-    axs[1].imshow(reference_image[y_min:y_max, x_min:x_max], cmap='gray')
-    im1 = axs[1].imshow(transparent_b1[y_min:y_max, x_min:x_max], cmap='RdBu', alpha=0.9, vmin=vmin, vmax=vmax)
-    axs[1].set_title('Interpolated on Reference', fontsize=20, fontname='Arial', weight='bold')
-    axs[1].axis('off')
+        divider = make_axes_locatable(axs[1])
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cbar = fig.colorbar(im1, cax=cax)
+        cbar.ax.tick_params(labelsize=18)
+        cbar.set_label('$\Delta\\theta$ (°)', fontsize=18)
 
-    divider = make_axes_locatable(axs[1])
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    cbar = fig.colorbar(im1, cax=cax)
-    cbar.ax.tick_params(labelsize=18)
-    cbar.set_label('$\Delta\\theta$ (°)', fontsize=18)
-
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
-    st.pyplot(fig)
-    plt.savefig(os.path.join(image_path, 'B1_Maps.png'), dpi=300, bbox_inches="tight")
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
+        st.pyplot(fig)
+        plt.savefig(os.path.join(image_path, 'B1_Maps.png'), dpi=300, bbox_inches="tight")
+        map_to_return = transparent_b1
+    return map_to_return
 
 def plot_damb1_aha(b1_fits, reference_image, aha_segments, save_path):
     """

@@ -8,17 +8,20 @@ Created on Tue Jan  7 12:35:44 2025
 TODO:
 - Add option to upload data as Numpy array or DICOM
 - Add page for quick Cr/PCr analysis (with DICOM upload)
-- Change upload from path to uploading a .ZIP file
 - Change from automatically saving at path to download button
-- Modify saved data (entire session state is very inefficient)
 """
 # --- Imports --- #
 # Standard library imports
 import os 
+import io
 import subprocess
 import sys
 import importlib.metadata
 from pathlib import Path 
+import zipfile
+import tempfile
+import shutil
+import pickle
 # Third-party imports
 import streamlit as st
 # Local application imports
@@ -29,6 +32,56 @@ from custom import st_functions
 # --- Constants for app setup --- #
 SITE_ICON = "./custom/icons/ksp.ico"
 LOADING_GIF_PATH = Path("custom/icons/loading.gif")
+
+# --- Class for managing temporary directories --- #
+class TempDirManager:
+    """
+    Manages session-specific temporary directories.
+    
+    Crucially, it uses a __del__ finalizer to ensure
+    these directories are cleaned up when the Streamlit
+    session is garbage collected (e.g., user closes tab or times out).
+    """
+    def __init__(self):
+        self._upload_dir = None
+        self._results_dir = None
+    
+    def get_upload_dir(self):
+        """Get or create the temp upload dir for this session."""
+        if self._upload_dir is None or not os.path.isdir(self._upload_dir):
+            self._upload_dir = tempfile.mkdtemp(prefix="precat_upload_")
+        return self._upload_dir
+    
+    def get_results_dir(self):
+        """Get or create the temp results dir for this session."""
+        if self._results_dir is None or not os.path.isdir(self._results_dir):
+            self._results_dir = tempfile.mkdtemp(prefix="precat_results_")
+        return self._results_dir
+
+    def _cleanup(self):
+        """Safely removes the directories."""
+        if self._upload_dir and os.path.isdir(self._upload_dir):
+            try:
+                shutil.rmtree(self._upload_dir)
+            except Exception as e:
+                # Log this error for debugging on your server
+                print(f"Error cleaning up {self._upload_dir}: {e}")
+        
+        if self._results_dir and os.path.isdir(self._results_dir):
+            try:
+                shutil.rmtree(self._results_dir)
+            except Exception as e:
+                print(f"Error cleaning up {self._results_dir}: {e}")
+
+    def cleanup_now(self):
+        """Forcibly clean up and reset paths (used by 'Reset' button)."""
+        self._cleanup()
+        self._upload_dir = None
+        self._results_dir = None
+
+    def __del__(self):
+        """Finalizer called by Python garbage collector on session end."""
+        self._cleanup()
 
 # --- Session state management --- #
 def initialize_session_state():
@@ -73,6 +126,8 @@ def clear_session_state():
     Clears all keys from the session state.
     This is used to reset the app.
     """
+    if "temp_dir_manager" in st.session_state:
+        st.session_state.temp_dir_manager.cleanup_now()
     for key in list(st.session_state.keys()):
         del st.session_state[key]
 
@@ -141,10 +196,57 @@ def validate_mrf(directory, mrf_path):
     else:
         return False, check_mrf
 
-#def validate_dict(mrf_full_path):
+# --- Saving data --- #
+def create_zip_in_memory(directory_path):
     """
-    Check to see whether there's already a dictionary file.
+    Zips an entire directory and returns it as an in-memory BytesIO object.
     """
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for root, dirs, files in os.walk(directory_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                # Create a relative path for files in zip
+                archive_name = os.path.relpath(file_path, directory_path)
+                zip_file.write(file_path, archive_name)
+    zip_buffer.seek(0)
+    return zip_buffer
+
+def prepare_data_for_saving(pixel_maps, b1_map, wassr_map, t1_map, quesp_maps):
+    """
+    Selects only the necessary, final data from session_state for saving.
+    It dynamically builds the 'fits' dictionary to only include
+    data that was actually calculated and all generated pixelwise maps.
+    """
+    # 1. Start with the essentials
+    data_to_save = {
+        'submitted_data': st.session_state.submitted_data,
+        'user_geometry': st.session_state.user_geometry,
+        'log_messages': st.session_state.log_messages,
+        'fits': {} # Initialize an empty dict
+    }
+    # 2. Define all *possible* non-map fit keys
+    possible_fit_keys = [
+        'cest', 'wassr', 'damb1', 
+        'quesp', 't1', 'cest-mrf'
+    ]
+    # 3. Dynamically add *only* the data that actually exists
+    for key in possible_fit_keys:
+        fit_data = st.session_state.fits.get(key)
+        if fit_data is not None:
+            data_to_save['fits'][key] = fit_data
+    # 4. Add all generated pixelwise maps
+    if pixel_maps is not None:
+        data_to_save['fits']['cest_pixelwise_maps'] = pixel_maps
+    if b1_map is not None:
+        data_to_save['fits']['b1_interpolated_map'] = b1_map
+    if wassr_map is not None:
+        data_to_save['fits']['b0_pixelwise_map'] = wassr_map
+    if t1_map is not None:
+        data_to_save['fits']['t1_pixelwise_map'] = t1_map
+    if quesp_maps is not None:
+        data_to_save['fits']['quesp_pixelwise_maps'] = quesp_maps
+    return data_to_save    
 
 # --- MRF required tool functions --- #
 def check_mrf_tools_installed():
@@ -244,8 +346,47 @@ def do_data_submission():
         anatomy = st.pills("ROI", organs)
     
     if selection and anatomy:
-        folder_path = st.text_input('Input data path', placeholder='User/Documents/MRI_Data/Project/Scan_ID')
-        save_path = st.text_input('Save processed data as', placeholder='Liver_5uT_Radial')
+
+        manager = st.session_state.temp_dir_manager
+        uploaded_zip = st.file_uploader("Upload entire ParaVision study (.zip file)", type="zip")
+
+        folder_path = None 
+        base_folder_name = None
+
+        if uploaded_zip:
+            try:
+                # Create a temp directory to extract the zip file
+                temp_upload_dir = manager.get_upload_dir()
+                with zipfile.ZipFile(uploaded_zip, 'r') as zip_ref:
+                    zip_ref.extractall(temp_upload_dir)
+                expected_folder_name = Path(uploaded_zip.name).stem 
+                potential_path = os.path.join(temp_upload_dir, expected_folder_name)
+                if os.path.isdir(potential_path):
+                    folder_path = potential_path
+                else:
+                    folder_path = temp_upload_dir
+                base_folder_name = os.path.basename(folder_path)
+                # st.success(f"Successfully set study path: {folder_path}")
+            except Exception as e:
+                st.error(f"Error processing .zip file: {e}")
+                folder_path = None # Ensure processing doesn't continue
+
+        save_suffix = st.text_input('Output suffix (optional)',
+            placeholder = 'Liver_5uT_Radial_v1',
+            help="This will be appended to the study folder name.")
+        final_save_name = None
+        if base_folder_name:
+            if save_suffix:
+                # Clean up suffix just in case
+                clean_suffix = save_suffix.strip().replace(" ", "_")
+                final_save_name = f"{base_folder_name}_{clean_suffix}"
+            else:
+                final_save_name = base_folder_name
+            # Display the final name to the user
+            st.success(f"Final output name will be: **{final_save_name}.zip**")
+
+        # folder_path = st.text_input('Input data path', placeholder='User/Documents/MRI_Data/Project/Scan_ID')
+        # save_path = st.text_input('Save processed data as', placeholder='Liver_5uT_Radial')
         
         cest_validation = True
         quesp_validation = True
@@ -254,7 +395,7 @@ def do_data_submission():
         damb1_validation = True
         all_fields_filled = True  
 
-        if not folder_path or not save_path:
+        if not folder_path or not final_save_name:
             all_fields_filled = False
     
         if folder_path and os.path.isdir(folder_path):
@@ -520,18 +661,21 @@ def do_data_submission():
                         st.session_state.is_submitted = True
                         st.session_state.processing_active = True
                         # Ensure Data folder exists within the main path
-                        data_folder = os.path.join(folder_path, "Data")
-                        if not os.path.isdir(data_folder):
-                            os.makedirs(data_folder)
+                        # data_folder = os.path.join(folder_path, "Data")
+                        # if not os.path.isdir(data_folder):
+                        #     os.makedirs(data_folder)
                         
                         # Create folder for save_path within Data
-                        save_full_path = os.path.join(data_folder, save_path)
-                        if not os.path.isdir(save_full_path):
-                            os.makedirs(save_full_path)
-                        save_path = save_full_path  # Overwrite save_path with the full path
+                        # save_full_path = os.path.join(data_folder, save_path)
+                        # if not os.path.isdir(save_full_path):
+                        #     os.makedirs(save_full_path)
+                        # save_path = save_full_path  # Overwrite save_path with the full path
+                        temp_results_dir = manager.get_results_dir()
+                        save_path = temp_results_dir
                         st.session_state.submitted_data = {
                             "folder_path": folder_path,
                             "save_path": save_path,
+                            "save_name": final_save_name,
                             "selection": selection,
                             "organ": anatomy,
                             "reference": st.session_state.get("reference"),
@@ -565,9 +709,10 @@ def do_data_submission():
             else:
                 if not all_fields_filled:
                     st.error("Please fill in all the required fields before submitting.")
-        else:
-            if folder_path:
-                st.error(f"The provided data path does not exist: {folder_path}")
+        # else:
+        #     if folder_path:
+        #         st.error(f"The provided data path does not exist: {folder_path}")
+
 
 def do_processing_pipeline():
     """
@@ -825,6 +970,14 @@ def display_results():
     """
     submitted = st.session_state.submitted_data
     save_path = submitted['save_path']
+    final_save_name = submitted.get('save_name', 'precat_results')
+
+    # Initialize all map variables
+    pixel_maps_for_saving = None
+    b1_map_for_saving = None
+    wassr_map_for_saving = None
+    t1_map_for_saving = None
+    quesp_maps_for_saving = None
     
     if "CEST" in submitted['selection']:
         st.header('CEST Results')
@@ -835,7 +988,7 @@ def display_results():
         else:
             plotting.show_rois(ref_image, st.session_state.user_geometry['masks'], save_path)
         if submitted.get('pixelwise') and 'cest_pixelwise' in st.session_state.fits:
-            plotting.pixelwise_mapping(
+            pixel_maps_for_saving = plotting.pixelwise_mapping(
                 ref_image, st.session_state.fits['cest_pixelwise'], 
                 st.session_state.user_geometry,
                 submitted.get('custom_contrasts'), submitted.get('smoothing_filter'), save_path
@@ -847,12 +1000,12 @@ def display_results():
         st.header('QUESP Results')
         col1, col2 = st.columns(2)
         with col1:
-            plotting_quesp.plot_t1_map(st.session_state.fits['t1'], st.session_state.processed_data['quesp']['m0'], st.session_state.user_geometry['masks'], save_path)
+            t1_map_for_saving = plotting_quesp.plot_t1_map(st.session_state.fits['t1'], st.session_state.processed_data['quesp']['m0'], st.session_state.user_geometry['masks'], save_path)
         with col2:
             plotting.show_rois(st.session_state.processed_data['quesp']['m0'], st.session_state.user_geometry['masks'], save_path)
         quespmin, quespmax = st.slider("Percentile range for plots and statistics display:", 0, 100, value=(5, 95))
         st.warning(f'Plot colorbars and statistics are displayed within the {quespmin}-{quespmax}th percentile range per ROI.')
-        plotting_quesp.plot_quesp_maps(st.session_state.fits['quesp'], st.session_state.user_geometry['masks'], st.session_state.processed_data['quesp']['m0'], save_path, quespmin, quespmax)
+        quesp_maps_for_saving = plotting_quesp.plot_quesp_maps(st.session_state.fits['quesp'], st.session_state.user_geometry['masks'], st.session_state.processed_data['quesp']['m0'], save_path, quespmin, quespmax)
         stats_df = plotting_quesp.calculate_quesp_stats(st.session_state.fits['quesp'], st.session_state.fits['t1'], quespmin, quespmax)
         st.dataframe(stats_df.style.format("{:.4f}"))
         st_functions.save_df_to_csv(stats_df, save_path)
@@ -875,21 +1028,53 @@ def display_results():
     if "WASSR" in submitted['selection']:
         st.header('WASSR Results')
         ref_image = st.session_state.processed_data['cest']['m0'] if 'cest' in st.session_state.processed_data else st.session_state.processed_data['wassr']['m0']
-        plotting_wassr.plot_wassr(ref_image, st.session_state.user_geometry, st.session_state.fits.get('wassr'), save_path,st.session_state.fits.get('wassr_full_map'))
+        wassr_map_for_saving = plotting_wassr.plot_wassr(ref_image, st.session_state.user_geometry, st.session_state.fits.get('wassr'), save_path,st.session_state.fits.get('wassr_full_map'))
         if submitted['organ'] == 'Cardiac':
             plotting_wassr.plot_wassr_aha(st.session_state.fits['wassr'], save_path)
 
     if "DAMB1" in submitted['selection']:
         st.header('DAMB1 Results')
         ref_image = st.session_state.processed_data['cest']['m0'] if 'cest' in st.session_state.processed_data else st.session_state.processed_data['wassr']['m0'] if 'wassr' in st.session_state.processed_data else None
-        plotting_damb1.plot_damb1(st.session_state.fits['damb1'], ref_image, st.session_state.user_geometry, save_path)
+        b1_map_for_saving = plotting_damb1.plot_damb1(st.session_state.fits['damb1'], ref_image, st.session_state.user_geometry, save_path)
         if submitted['organ'] == 'Cardiac':
             plotting_damb1.plot_damb1_aha(st.session_state.fits['damb1'], ref_image, st.session_state.user_geometry['aha'], save_path)
 
-    st_functions.save_raw(st.session_state)
+    data_to_save = prepare_data_for_saving(
+        pixel_maps_for_saving,
+        b1_map_for_saving,
+        wassr_map_for_saving,
+        t1_map_for_saving,
+        quesp_maps_for_saving
+        )
+
+    raw_data_dir = os.path.join(save_path, "Raw")
+    os.makedirs(raw_data_dir, exist_ok=True)
+    raw_data_path = os.path.join(raw_data_dir, "session_data.pkl")
+
+    try:
+        with open(raw_data_path, 'wb') as f:
+            pickle.dump(data_to_save, f)
+    except Exception as e:
+        st.error(f"Error saving raw data: {e}")
+        st_functions.message_logging(f"Error saving raw data: {e}", msg_type='error')
+
+    # --- 3. Zip and Provide Download ---
+    if any(msg_type in ['warning', 'error'] for _, msg_type in st.session_state.log_messages):
+        st.error("**One or more issues were noted during processing. Please review the log.**")
+    try:
+        zip_buffer = create_zip_in_memory(save_path) # Assumes this function exists
+        st.success(f"Processing complete! Click the button below to download your results.")
+        st.download_button(
+            label="Download Results",
+            data=zip_buffer,
+            file_name=f"{final_save_name}.zip",
+            mime="application/zip"
+        )
+    except Exception as e:
+        st.error(f"An error occurred while creating the results zip file: {e}")
+    # st_functions.save_raw(st.session_state)
     if any(msg_type in ['warning', 'error'] for _, msg_type in st.session_state.log_messages):
         st.error("**One or more issues were noted during processing. Please review the log in the 'Process data' expander.**")
-    st.success(f"Images, plots, and raw data saved at **{save_path}**")
 
 # --- Main app --- #
 def main():
@@ -902,6 +1087,8 @@ def main():
         st_functions.inject_custom_loader(LOADING_GIF_PATH)
     st_functions.inject_spinning_logo_css(SITE_ICON)
     initialize_session_state()
+    if "temp_dir_manager" not in st.session_state:
+        st.session_state.temp_dir_manager = TempDirManager()
     render_sidebar()
     hoverable_pre_cat = st_functions.add_hoverable_title_with_image_inline(
         "Pre-CAT", "https://i.ibb.co/gMQ7MCb/Subject-4.png"
