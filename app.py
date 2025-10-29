@@ -296,7 +296,7 @@ def render_sidebar():
     Renders sidebar content (disclaimers, contact info, etc.)
     """
     with st.sidebar:
-        st.page_link("pages/1_bmc_sim.py", label="BMC Simulation", icon="🧲")
+        # st.page_link("pages/1_bmc_sim.py", label="BMC Simulation", icon="🧲") # Ignore for now, not done
         st.write("""## Instructions and Disclaimer
 Specify experiment type(s), ROI, and file locations for raw data.
 
