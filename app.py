@@ -237,15 +237,15 @@ def prepare_data_for_saving(pixel_maps, b1_map, wassr_map, t1_map, quesp_maps):
             data_to_save['fits'][key] = fit_data
     # 4. Add all generated pixelwise maps
     if pixel_maps is not None:
-        data_to_save['fits']['cest_pixelwise_maps'] = pixel_maps
+        data_to_save['fits']['cest_maps'] = pixel_maps
     if b1_map is not None:
         data_to_save['fits']['b1_interpolated_map'] = b1_map
     if wassr_map is not None:
-        data_to_save['fits']['b0_pixelwise_map'] = wassr_map
+        data_to_save['fits']['b0_map'] = wassr_map
     if t1_map is not None:
-        data_to_save['fits']['t1_pixelwise_map'] = t1_map
+        data_to_save['fits']['t1_map'] = t1_map
     if quesp_maps is not None:
-        data_to_save['fits']['quesp_pixelwise_maps'] = quesp_maps
+        data_to_save['fits']['quesp_maps'] = quesp_maps
     return data_to_save    
 
 # --- MRF required tool functions --- #
@@ -561,7 +561,18 @@ def do_data_submission():
                                 st.error(f"Incorrect CEST-MRF method detected: **{check_mrf}**. Only **<User:fp_EPI>** is supported.")
                                 mrf_validation = False
                             else:
-                                config_path = st.text_input('Input MRF config full path', help="Example config file available at */Pre-CAT/configs/mrf/example_config.py*")
+                                manager = st.session_state.temp_dir_manager
+                                config_path = None
+                                config_file = st.file_uploader("Upload Python config (.py fle)", type="py", help="Example config file available at */Pre-CAT/configs/mrf/example_config.py* or on *GitHub*")
+                                if config_file is not None:
+                                    # Get the session's temporary upload directory
+                                    temp_dir = manager.get_upload_dir()
+                                    # Construct the full path for the config inside the temp directory
+                                    config_path = os.path.join(temp_dir, config_file.name)
+                                    # Write the uploaded file's content to that path
+                                    with open(config_path, 'wb') as f:
+                                        f.write(config_file.getvalue())
+                                    # st.success(f"Config saved to temporary path: {config_path}")
                                 if config_path:
                                     config_exists = os.path.isfile(config_path)
                                     if not config_exists:
@@ -571,16 +582,30 @@ def do_data_submission():
                                         try:
                                             config = parse_config.build_config_from_file(config_path)
                                             proton_params = parse_config.get_proton_params(config_path)
-                                            dict_methods = ['Dot product', 'Deep learning']
-                                            mrf_method = st.pills("Dictionary matching method", dict_methods, default='Dot product')
-                                            if mrf_method == 'Deep learning':
-                                                st.error("Deep learning recon has not been implemented. Please choose dot product matching for now.")
-                                                mrf_validation = False
                                         except Exception as e:
                                             st.error(f"Error processing config file: {e}")
                                             mrf_validation = False
+                                        upload_dict = st.toggle("Upload precalculated MATLAB dictionary?")
+                                        dict_path = None 
+                                        if upload_dict:
+                                            st.warning('**WARNING** Double check that your dictionary matches BOTH the uploaded config file AND imaging acquisition schedule!!')
+                                            dict_file = st.file_uploader("Upload MATLAB dictionary (.mat file)", type="mat")
+                                            if dict_file is not None:
+                                                temp_dir = manager.get_upload_dir()
+                                                dict_path = os.path.join(temp_dir, dict_file.name)
+                                                with open(dict_path, 'wb') as f:
+                                                    f.write(dict_file.getvalue())
+                                                    # st.success(f"Dictionary saved to temporary path: {dict_path}")
+                                            else:
+                                                all_fields_filled = False
                                 else:
                                     all_fields_filled = False
+                                if config_path and ((upload_dict and dict_path) or not upload_dict):
+                                    dict_methods = ['Dot product', 'Deep learning']
+                                    mrf_method = st.pills("Dictionary matching method", dict_methods, default='Dot product')
+                                    if mrf_method == 'Deep learning':
+                                        st.error("Deep learning recon has not been implemented. Please choose dot product matching for now.")
+                                        mrf_validation = False
                     else:
                         all_fields_filled = False
 
@@ -701,10 +726,21 @@ def do_data_submission():
                             st.session_state.submitted_data['quesp_type'] = quesp_type
                             st.session_state.submitted_data['fixed_fb'] = fixed_fb
                         if "CEST-MRF" in selection:
+                            mrf_files_dir = os.path.join(save_path, 'mrf_files') 
+                            os.makedirs(mrf_files_dir, exist_ok=True)
+                            if config is not None:
+                                config['yaml_fn'] = os.path.join(mrf_files_dir, 'scenario.yaml')
+                                config['seq_fn'] = os.path.join(mrf_files_dir, 'acq_protocol.seq')
+                                if upload_dict and dict_path:
+                                    config['dict_fn'] = dict_path
+                                else:
+                                    config['dict_fn'] = os.path.join(mrf_files_dir, 'dict.mat')
                             st.session_state.submitted_data['mrf_path'] = mrf_path
                             st.session_state.submitted_data['mrf_config'] = config
                             st.session_state.submitted_data['proton_params'] = proton_params
                             st.session_state.submitted_data['mrf_method'] = mrf_method
+                            st.session_state.submitted_data['upload_dict'] = upload_dict
+                            st.session_state.submitted_data['dict_path'] = dict_path
                         st.rerun()
             else:
                 if not all_fields_filled:
@@ -737,7 +773,10 @@ def do_processing_pipeline():
         if 'cest-mrf' in selection:
             load_mrf.write_yaml(submitted['mrf_config'])
             load_mrf.seq_from_method(submitted['mrf_path'], submitted['folder_path'], submitted['mrf_config'])
-            load_mrf.generate_dictionary(submitted['mrf_config'])
+            if not (submitted['upload_dict']):
+                load_mrf.generate_dictionary(submitted['mrf_config'])
+            else:
+                st_functions.message_logging("Using pre-calculated MRF dictionary.", msg_type='info')
         st.session_state.pipeline_status['mrf_gen_done'] = True
         st.rerun()
 
@@ -955,7 +994,12 @@ def do_processing_pipeline():
 
             if "cest-mrf" in selection:
                 if st.session_state.submitted_data['mrf_method'] == 'Dot product':
-                    st.session_state.fits['cest-mrf'] = mrf_fitting.mrf_dot_prod(st.session_state.submitted_data['mrf_config']['dict_fn'], st.session_state.processed_data['cest-mrf']['imgs'], masks)
+                    dictionary_to_use = submitted['mrf_config']['dict_fn']
+                    if submitted.get('mrf_upload_dict'):
+                        st_functions.message_logging(f"Fitting with user-uploaded dictionary: {os.path.basename(dictionary_to_use)}", msg_type='info')
+                    else:
+                        st_functions.message_logging(f"Fitting with generated dictionary: {os.path.basename(dictionary_to_use)}", msg_type='info') 
+                    st.session_state.fits['cest-mrf'] = mrf_fitting.mrf_dot_prod(dictionary_to_use, st.session_state.processed_data['cest-mrf']['imgs'], masks)
 
             st_functions.message_logging("All processing complete!")
             st.session_state.pipeline_status['fitting_done'] = True
@@ -1006,22 +1050,23 @@ def display_results():
         quespmin, quespmax = st.slider("Percentile range for plots and statistics display:", 0, 100, value=(5, 95))
         st.warning(f'Plot colorbars and statistics are displayed within the {quespmin}-{quespmax}th percentile range per ROI.')
         quesp_maps_for_saving = plotting_quesp.plot_quesp_maps(st.session_state.fits['quesp'], st.session_state.user_geometry['masks'], st.session_state.processed_data['quesp']['m0'], save_path, quespmin, quespmax)
-        stats_df = plotting_quesp.calculate_quesp_stats(st.session_state.fits['quesp'], st.session_state.fits['t1'], quespmin, quespmax)
-        st.dataframe(stats_df.style.format("{:.4f}"))
-        st_functions.save_df_to_csv(stats_df, save_path)
+        quesp_stats_df = plotting_quesp.calculate_quesp_stats(st.session_state.fits['quesp'], st.session_state.fits['t1'], quespmin, quespmax)
+        st.dataframe(quesp_stats_df.style.format("{:.4f}"))
+        st_functions.save_df_to_csv(quesp_stats_df, save_path, type='QUESP')
 
     if "CEST-MRF" in submitted['selection']:
         st.header('CEST-MRF Results')
         reference_image = st.session_state.processed_data['cest-mrf']['imgs'][:, :, 0]
         mrf_results = st.session_state.fits.get('cest-mrf')
         if mrf_results:
-            plotting_mrf.plot_mrf_maps(mrf_results, reference_image, st.session_state.submitted_data['proton_params'])
-        stats_df = plotting_mrf.calculate_mrf_stats(
+            plotting_mrf.plot_mrf_maps(mrf_results, reference_image, save_path, st.session_state.submitted_data['proton_params'])
+        mrf_stats_df = plotting_mrf.calculate_mrf_stats(
             mrf_results,
             proton_params=st.session_state.submitted_data.get('proton_params')
         )
-        if stats_df is not None and not stats_df.empty:
-            st.dataframe(stats_df.style.format("{:.2f}"))
+        if mrf_stats_df is not None and not mrf_stats_df.empty:
+            st.dataframe(mrf_stats_df.style.format("{:.2f}"))
+            st_functions.save_df_to_csv(mrf_stats_df, save_path, type='MRF')
         else:
             st.info("No statistics to display.")
 

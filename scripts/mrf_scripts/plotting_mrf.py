@@ -1,9 +1,10 @@
+import os
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
+def plot_mrf_maps(mrf_results_by_roi, reference_image, save_path, proton_params=None):
     """
     Displays CEST-MRF quantitative maps in Streamlit tabs.
 
@@ -13,7 +14,8 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
     if not mrf_results_by_roi:
         st.warning("No MRF results found to display.")
         return
-
+    image_path = os.path.join(save_path, 'Images')
+    os.makedirs(image_path, exist_ok=True)
     # --- 1. Combine maps from all ROIs ---
     map_keys = list(next(iter(mrf_results_by_roi.values())).keys())
     
@@ -71,7 +73,7 @@ def plot_mrf_maps(mrf_results_by_roi, reference_image, proton_params=None):
             
             ax.set_title(f"{param_details[key]['name']} Map")
             ax.axis('off')
-            
+            plt.savefig(image_path + '/' + key + '_MRF_Map.png', dpi=300, bbox_inches="tight")
             st.pyplot(fig)
 
 def get_mrf_param_details():
