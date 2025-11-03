@@ -116,6 +116,7 @@ def initialize_session_state():
         "user_geometry": {"rois": None, "masks": None, "aha": None},
         "fits": {},
         # Log messages
+        "timing_log": [],
         "log_messages": [],
     }
     for key, value in defaults.items():
@@ -1085,6 +1086,24 @@ def display_results():
         b1_map_for_saving = plotting_damb1.plot_damb1(st.session_state.fits['damb1'], ref_image, st.session_state.user_geometry, save_path)
         if submitted['organ'] == 'Cardiac':
             plotting_damb1.plot_damb1_aha(st.session_state.fits['damb1'], ref_image, st.session_state.user_geometry['aha'], save_path)
+
+    if "timing_log" in st.session_state and st.session_state.timing_log:
+        try:
+            # We need pandas for this
+            import pandas as pd
+            
+            timing_df = pd.DataFrame(st.session_state.timing_log)
+            
+            # Define the path for the CSV inside the "Raw" folder
+            raw_data_dir = os.path.join(save_path, "Raw")
+            os.makedirs(raw_data_dir, exist_ok=True)
+            csv_path = os.path.join(raw_data_dir, "processing_time_log.csv")
+            
+            # Save the CSV
+            timing_df.to_csv(csv_path, index=False)
+
+        except Exception as e:
+            st_functions.message_logging(f"Failed to save timing log as CSV: {e}", msg_type='warning')
 
     data_to_save = prepare_data_for_saving(
         pixel_maps_for_saving,

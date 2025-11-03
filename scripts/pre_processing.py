@@ -28,6 +28,7 @@ def recon(ksp, traj):
     img = np.squeeze(img)
     return img
 
+@time_it
 def motion_correction(ksp, traj, method, experiment_type):
     """
     Performs motion correction by identifying and deleting corrupted segments.
@@ -94,6 +95,7 @@ def motion_correction(ksp, traj, method, experiment_type):
     loading_bar.progress(1.0, text="Motion correction complete.")
     return np.stack(filtered_images_list, axis=-1)
 
+@time_it
 def denoise_data(image_stack):
     """
     Denoises a stack of images using Global PCA.

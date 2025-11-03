@@ -61,6 +61,7 @@ def calc_proton_volume_fraction(conc, num_protons):
     return (num_protons * conc) / (111e3)
 
 # --- Fitting functions --- #
+@time_it
 def fit_quesp_map(quesp_data, t1_pixel_fits, masks, fit_type, fixed_fb=None):
     """
     Performs a pixel-wise QUESP fit for each ROI, with a single unified progress bar.
@@ -209,6 +210,7 @@ def fit_quesp_map(quesp_data, t1_pixel_fits, masks, fit_type, fixed_fb=None):
     st_functions.message_logging("QUESP fitting complete!")
     return results_by_roi
 
+@time_it
 def fit_t1_map(t1_data, masks):
     """
     Performs a pixel-wise T1 fit for each ROI, with a single unified progress bar.

@@ -3,6 +3,7 @@ import streamlit as st
 import numpy.linalg as la
 import scipy.io as sio
 
+@time_it
 def mrf_dot_prod(dict_path, image_stack, roi_masks):
     """
     Wrapper function to run dot-product matching for all ROIs and display progress.
@@ -32,10 +33,6 @@ def mrf_dot_prod(dict_path, image_stack, roi_masks):
     progress_bar.progress(100)
     
     return results_by_roi
-
-
-import numpy as np
-import numpy.linalg as la
 
 def dot_prod_matching_roi(dictionary, image_stack, roi_mask, batch_size=256, progress_bar=None, status_text=None):
     """

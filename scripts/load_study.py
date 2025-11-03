@@ -12,6 +12,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from scipy.interpolate import interpn
 from custom import st_functions
+from custom.st_functions import time_it
 
 if 'BART_TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['BART_TOOLBOX_PATH']):
 	sys.path.append(os.path.join(os.environ['BART_TOOLBOX_PATH'], 'python'))
@@ -32,7 +33,8 @@ def load_bruker_img(num, directory):
     imgs = data.proc_data
     imgs = np.rot90(imgs, k=2) # Rotates image, may not be necessary 
     return imgs
-    
+
+@time_it    
 def recon_bruker(num, directory):
     """
     Loads CEST data from Bruker processed image data.
@@ -53,6 +55,7 @@ def recon_bruker(num, directory):
     study = {"imgs": imgs, "offsets": offsets}
     return study
 
+@time_it
 def recon_bart(num, directory):
     """
     Reconstructs radial CEST data using BART.
@@ -77,6 +80,7 @@ def recon_bart(num, directory):
     study = {"imgs": imgs, "offsets": offsets}
     return study
 
+@time_it
 def recon_quesp(num, directory):
     """
     Retrieves and organizes QUESP processed image data.
@@ -148,6 +152,7 @@ def calc_mtr(images, powers, tsats, trecs, offsets_ppm):
             mtr_maps.append(map_data)
     return mtr_maps
 
+@time_it
 def recon_t1map(num, directory):
     """
     Load images and TRs for T1 mapping from VTR acquisition.
@@ -155,6 +160,7 @@ def recon_t1map(num, directory):
     data = bruker.ReadExperiment(directory, num)
     return {"imgs": data.proc_data, "trs": data.method['MultiRepTime']}
 
+@time_it
 def recon_damb1(directory, theta_path, two_theta_path):
     """
     Reconstructs B1 maps from two double angle (DAMB1) experiments.
@@ -187,6 +193,7 @@ def flip_image_stack_vertically(image_stack):
     """
     return np.flip(image_stack, axis=1)
 
+@time_it
 def thermal_drift(recon_data):
     """
     Performs thermal drift correction on an image stack.
