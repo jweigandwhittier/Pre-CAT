@@ -81,7 +81,7 @@ Follow each step after carefully reading associated instructions.
 Example scenarios, sequences, and Pulseq files can be found at the [Pulseq-CEST library](%s) repository.
         """ % pulseq_url)
         st.write("""## Citation
-This webapp is associated with the following paper, please cite this work when using the **BMC Simulation Platform**. \n
+This webapp is associated with the following papers, please cite this work when using the **BMC Simulation Platform**. \n
 Vladimirov N, Cohen O, Heo H-Y, et al. *Quantitative molecular imaging using deep magnetic resonance fingerprinting*. Nat Protocols (2025). 10.1038/s41596-025-01152-w. \n
 Herz K, Mueller S, Perlman O, et al. *Pulseq-CEST: Towards multi-site multi-vendor compatibility and reproducibility of CEST experiments using an open-source sequence standard*. Magn Reson Med (2021). 10.1002/mrm.28825. 
 """)

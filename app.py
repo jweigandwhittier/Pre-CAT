@@ -22,6 +22,7 @@ import zipfile
 import tempfile
 import shutil
 import pickle
+import multiprocessing
 # Third-party imports
 import streamlit as st
 # Local application imports
@@ -297,8 +298,9 @@ def render_sidebar():
     """
     with st.sidebar:
         # st.page_link("pages/1_bmc_sim.py", label="BMC Simulation", icon="🧲") # Ignore for now, not done
+        # st.page_link("pages/2_ratiometric_mapping.py", label="PCr/Cr Ratiometric Mapping", icon="🫀") # Ignore for now, not done
         st.write("""## Instructions and Disclaimer
-Specify experiment type(s), ROI, and file locations for raw data.
+Specify experiment type(s), ROI, and uploade *full* zipped ParaVision archive.
 
 Follow each subsequent step after carefully reading associated instructions.
 
@@ -1167,4 +1169,5 @@ def main():
         st.rerun()
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method('spawn', force=True)
     main()
