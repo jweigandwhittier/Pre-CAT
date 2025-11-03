@@ -12,6 +12,7 @@ from sklearn.decomposition import PCA
 import scripts.BrukerMRI as bruker 
 from bart import bart 
 from custom import st_functions
+from custom.st_functions import time_it
 
 # --- Constants (tunable) --- #
 SPIKE_THRESHOLD_STD = 0.5

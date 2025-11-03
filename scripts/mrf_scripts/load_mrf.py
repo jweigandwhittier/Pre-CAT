@@ -11,6 +11,7 @@ import scripts.BrukerMRI as bruker
 import pypulseq as pp
 import streamlit as st
 from custom import st_functions
+from custom.st_functions import time_it
 
 @time_it
 def generate_dictionary(cfg):

@@ -11,6 +11,7 @@ from sklearn.metrics import r2_score
 import pandas as pd
 import streamlit as st
 from custom import st_functions
+from custom.st_functions import time_it
 
 # --- Constants --- #
 # Proton gyromagnetic ratio (rad/T/s)

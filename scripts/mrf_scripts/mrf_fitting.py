@@ -1,14 +1,15 @@
 import numpy as np
 import streamlit as st
 import numpy.linalg as la
-import scipy.io as sio
+import scipy.io as scio
+from custom.st_functions import time_it
 
 @time_it
 def mrf_dot_prod(dict_path, image_stack, roi_masks):
     """
     Wrapper function to run dot-product matching for all ROIs and display progress.
     """
-    dictionary = sio.loadmat(dict_path)
+    dictionary = scio.loadmat(dict_path)
     results_by_roi = {}
 
     st.write("Performing MRF dot-product matching...")

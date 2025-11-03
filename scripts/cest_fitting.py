@@ -10,6 +10,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 from scipy.optimize import curve_fit
 from scipy.interpolate import CubicSpline
+from custom.st_functions import time_it
 
 # --- Curve fitting parameters. Feel free to modify, results not guaranteed. --- #
 ###Pre-correction###
