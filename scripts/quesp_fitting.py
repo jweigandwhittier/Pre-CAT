@@ -247,3 +247,14 @@ def fit_t1_map(t1_data, masks):
     progress_bar.progress(1.0, text="T₁ map fitting complete.")
     progress_bar.empty()
     return pixelwise_fits
+
+def fixed_t1_map(fixed_t1, masks):
+    pixelwise_fits = {}
+    all_coords = []
+    for label, mask in masks.items():
+        coords = np.argwhere(mask)
+        all_coords.extend([(label, tuple(coord)) for coord in coords])
+        pixelwise_fits[label] = []
+    for i, (label, (y, x)) in enumerate(all_coords):
+        pixelwise_fits[label].append(fixed_t1)
+    return pixelwise_fits

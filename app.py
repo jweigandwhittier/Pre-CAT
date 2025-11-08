@@ -503,11 +503,25 @@ def do_data_submission():
                     quesp_validation = False
                     st.error("QUESP analysis is only supported for non-cardiac ROIs at this time.")
                 else:
+                    t1_input_method = None
+                    fixed_t1_s = None
+                    t1_path = None
                     quesp_path = st.text_input('Input QUESP experiment number', help="Currently, only QUESP data acquired using the 'fp_EPI' sequence are supported.")
-                    t1_path = st.text_input('Input T1 mapping experiment number', help="Currently, only VTR RARE T1 mapping is supported.")
-                    if quesp_path and t1_path:
+                    
+                    t1_input_method = st.radio("T1 Input Method", ["Use T1 Map", "Use Fixed T1 Value"], horizontal=True, key="quesp_t1_method")
+                    
+                    if t1_input_method == "Use T1 Map":
+                        t1_path = st.text_input('Input T1 mapping experiment number', help="Currently, only VTR RARE T1 mapping is supported.")
+                    elif t1_input_method == "Use Fixed T1 Value":
+                        fixed_t1_s = st.number_input("Input Fixed T1 Value (ms)", min_value=1, value=2000, step=1, format="%i", help="Enter the global T1 relaxation time in milliseconds.")
+                    quesp_inputs_provided = quesp_path and \
+                                          (t1_input_method == "Use T1 Map" and t1_path) or \
+                                          (t1_input_method == "Use Fixed T1 Value" and fixed_t1_s is not None)
+
+                    if quesp_inputs_provided:
                         fixed_fb = None
                         quesp_type = st.radio('QUESP analysis type', ["Standard (MTRasym)", "Inverse (MTRrex)", "Omega Plot"], horizontal=True)
+                        quesp_denoise = st.toggle('Use PCA denoising (experimental)?')
                         if not quesp_type:
                             all_fields_filled = False
                         enforce_fb = st.toggle('Enforce fixed proton volume fraction?', help = "Can be used for phantoms with known solute concentrations. Assumes 55.5M water.")
@@ -523,26 +537,52 @@ def do_data_submission():
                             value=2,   
                             step=1)
                             fixed_fb = quesp_fitting.calc_proton_volume_fraction(fixed_conc, labile_protons)
+                        
                         quesp_full_path = os.path.join(folder_path, quesp_path)
-                        t1_full_path = os.path.join(folder_path, t1_path)
                         quesp_folder_exists = os.path.isdir(quesp_full_path)
-                        t1_folder_exists = os.path.isdir(t1_full_path)
+                        
+                        t1_full_path = None
+                        t1_folder_exists = False
+
+                        if t1_input_method == "Use T1 Map":
+                            t1_full_path = os.path.join(folder_path, t1_path)
+                            t1_folder_exists = os.path.isdir(t1_full_path)
+                            if not t1_folder_exists:
+                                st.error(f"T1 map folder does not exist: {t1_full_path}")
+                                quesp_validation = False
+                        elif t1_input_method == "Use Fixed T1 Value":
+                            # Set to True to pass the next 'if' check, as no folder is needed
+                            t1_folder_exists = True
+                            st.success(f"Using fixed T1 value: {fixed_t1_s} ms")
+                        
                         if not quesp_folder_exists:
                             st.error(f"QUESP folder does not exist: {quesp_full_path}")
                             quesp_validation = False
-                        if not t1_folder_exists:
-                            st.error(f"T1 map folder does not exist: {t1_full_path}")
-                            quesp_validation = False
+                        
                         if quesp_folder_exists and t1_folder_exists:
-                            bad_quesp_method, check_quesp, check_t1 = validate_fp_quesp(folder_path, quesp_path, t1_path)
-                            if bad_quesp_method:
-                                quesp_validation = False
-                                if check_quesp != "<User:fp_EPI>":
-                                    st.error(f"Incorrect QUESP method detected: **{check_quesp}**. Only **<User:fp_EPI>** is supported.")
-                                if check_t1 != "<Bruker:RAREVTR>":
-                                    st.error(f"Incorrect T1 mapping method detected: **{check_t1}**. Only **<Bruker:RAREVTR>** is supported.")
-                            else:
-                                st.success("Method validation successful!")
+                            if t1_input_method == "Use T1 Map":
+                                bad_quesp_method, check_quesp, check_t1 = validate_fp_quesp(folder_path, quesp_path, t1_path)
+                                if bad_quesp_method:
+                                    quesp_validation = False
+                                    if check_quesp != "<User:fp_EPI>":
+                                        st.error(f"Incorrect QUESP method detected: **{check_quesp}**. Only **<User:fp_EPI>** is supported.")
+                                    if check_t1 != "<Bruker:RAREVTR>":
+                                        st.error(f"Incorrect T1 mapping method detected: **{check_t1}**. Only **<Bruker:RAREVTR>** is supported.")
+                                else:
+                                    st.success("Method validation successful!")
+                            elif t1_input_method == "Use Fixed T1 Value":
+                                # Only need to validate the QUESP method
+                                try:
+                                    exp_quesp = BrukerMRI.ReadExperiment(folder_path, quesp_path)
+                                    check_quesp = exp_quesp.method['Method']
+                                    if check_quesp != "<User:fp_EPI>":
+                                        quesp_validation = False
+                                        st.error(f"Incorrect QUESP method detected: **{check_quesp}**. Only **<User:fp_EPI>** is supported.")
+                                    else:
+                                        st.success("QUESP method validation successful!")
+                                except Exception as e:
+                                    st.error(f"Error validating QUESP method: {e}")
+                                    quesp_validation = False
                     else:
                          all_fields_filled = False
 
@@ -726,6 +766,8 @@ def do_data_submission():
                         if "QUESP" in selection:
                             st.session_state.submitted_data['quesp_path'] = quesp_path
                             st.session_state.submitted_data['t1_path'] = t1_path
+                            st.session_state.submitted_data['fixed_t1'] = fixed_t1_s
+                            st.session_state.submitted_data['quesp_denoise'] = quesp_denoise
                             st.session_state.submitted_data['quesp_type'] = quesp_type
                             st.session_state.submitted_data['fixed_fb'] = fixed_fb
                         if "CEST-MRF" in selection:
@@ -842,7 +884,8 @@ def do_processing_pipeline():
                     st.session_state.recon_data['damb1'] = load_study.recon_damb1(submitted['folder_path'], submitted['theta_path'], submitted['two_theta_path'])
                 if exp_type == "quesp":
                     st.session_state.recon_data['quesp'] = load_study.recon_quesp(submitted['quesp_path'], submitted['folder_path'])
-                    st.session_state.recon_data['t1'] = load_study.recon_t1map(submitted['t1_path'], submitted['folder_path'])
+                    if submitted['t1_path']:
+                        st.session_state.recon_data['t1'] = load_study.recon_t1map(submitted['t1_path'], submitted['folder_path'])
                 if exp_type == "cest-mrf":
                     st.session_state.recon_data['cest-mrf'] = load_study.recon_bruker(submitted['mrf_path'], submitted['folder_path'])
             st.session_state.pipeline_status['recon_done'] = True
@@ -907,7 +950,7 @@ def do_processing_pipeline():
                         corrected = load_study.thermal_drift({"imgs": oriented, "offsets": recon['offsets']})
                         st.session_state.processed_data[exp_type] = corrected
                     elif 'powers' in recon: # QUESP
-                        corrected = load_study.process_quesp({"imgs": oriented, "powers": recon['powers'], "tsats": recon['tsats'], "trecs": recon['trecs'], "offsets": recon['offsets']})
+                        corrected = load_study.process_quesp({"imgs": oriented, "powers": recon['powers'], "tsats": recon['tsats'], "trecs": recon['trecs'], "offsets": recon['offsets']}, denoise = submitted.get('quesp_denoise'))
                         st.session_state.processed_data[exp_type] = corrected
                     else: # DAMB1
                         st.session_state.processed_data[exp_type] = {"imgs": oriented, "nominal_flip": recon['nominal_flip']}
@@ -980,7 +1023,10 @@ def do_processing_pipeline():
                                 st_functions.message_logging(f"Fit RMSE in {segment.lower()} segment > 2% (RMSE = {rmse*100:.3f}%)!", msg_type='warning')
 
             if "quesp" in selection:
-                t1_fits = quesp_fitting.fit_t1_map(st.session_state.recon_data['t1'], masks)
+                if submitted['t1_path']:
+                    t1_fits = quesp_fitting.fit_t1_map(st.session_state.recon_data['t1'], masks)
+                else:
+                    t1_fits = quesp_fitting.fixed_t1_map(submitted['fixed_t1'], masks)
                 st.session_state.fits['t1'] = t1_fits
                 st.session_state.fits['quesp'] = quesp_fitting.fit_quesp_map(st.session_state.processed_data['quesp'], t1_fits, masks, submitted.get('quesp_type'), submitted.get('fixed_fb'))
             

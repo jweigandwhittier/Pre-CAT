@@ -23,6 +23,7 @@ else:
 
 from bart import bart
 import scripts.BrukerMRI as bruker
+from scripts.pre_processing import denoise_data
 
 # --- Reconstruction and data loading functions --- #
 def load_bruker_img(num, directory):
@@ -97,11 +98,13 @@ def recon_quesp(num, directory):
     study = {"imgs": images, "powers": powers, "tsats": tsats, "trecs": trecs, "offsets": offsets_ppm}
     return study
 
-def process_quesp(recon_data):
+def process_quesp(recon_data, denoise):
     """
     Performs normalization steps on raw QUESP data.
     """
     images = recon_data["imgs"]
+    if denoise == True:
+        images = denoise_data(images)
     powers = recon_data["powers"]
     tsats = recon_data["tsats"]
     trecs =  recon_data["trecs"]
