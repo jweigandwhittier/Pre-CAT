@@ -29,7 +29,7 @@ def plot_damb1(b1_fits, reference_image, user_geometry, save_path):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = fig.colorbar(im, cax=cax)
         cbar.ax.tick_params(labelsize=18)
-        cbar.set_label('$\Delta\\theta$ (°)', fontsize=18)
+        cbar.set_label('$\Delta\\alpha$ (%)', fontsize=18)
         ax.axis('off')
         st.pyplot(fig)
         plt.savefig(os.path.join(image_path, 'B1_Map_Raw.png'), dpi=300, bbox_inches="tight")
@@ -74,7 +74,7 @@ def plot_damb1(b1_fits, reference_image, user_geometry, save_path):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = fig.colorbar(im1, cax=cax)
         cbar.ax.tick_params(labelsize=18)
-        cbar.set_label('$\Delta\\theta$ (°)', fontsize=18)
+        cbar.set_label('$\Delta\\alpha$ (%)', fontsize=18)
 
         fig.tight_layout(rect=[0, 0, 1, 0.95])
         st.pyplot(fig)

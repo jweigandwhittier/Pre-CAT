@@ -274,7 +274,7 @@ def fit_b1(imgs, nominal_flip):
     
     theta_actual_rad = np.arccos(ratio)
     theta_actual_deg = np.rad2deg(theta_actual_rad)
-    flip_error = nominal_flip - theta_actual_deg
+    flip_error = theta_actual_deg / nominal_flip
     
     return np.nan_to_num(np.squeeze(flip_error))
     
