@@ -29,6 +29,8 @@ def plot_wassr_aha(wassr_aha_fits, save_path):
     palette = sns.color_palette("husl", len(df['Segment'].unique()))
     sns.boxplot(x='Segment', y='B0 Shift (ppm)', data=df, palette=palette, width=0.4, ax=ax)
 
+    ax.axhline(0, color='black', linestyle='--', linewidth=1.5, alpha=0.7)
+
     ax.set_title('B$_0$ Shift by AHA Segment', fontsize=28, fontname='Arial', weight='bold')
     ax.set_xlabel('', fontsize=18)
 

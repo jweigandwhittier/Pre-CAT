@@ -20,19 +20,23 @@ def plot_damb1(b1_fits, reference_image, user_geometry, save_path):
     image_path = os.path.join(save_path, 'Images')
     os.makedirs(image_path, exist_ok=True)
 
+    max_deviation = np.nanmax(np.abs(b1_fits - 1.0))
+    vmin = 1.0 - max_deviation
+    vmax = 1.0 + max_deviation
+
     # If no reference image is provided, just show the raw B1 map.
     if reference_image is None:
         fig, ax = plt.subplots(1, 1, figsize=(8, 8))    
-        im = ax.imshow(b1_fits, cmap='RdBu')
-        ax.set_title('$B_1$ Map', fontsize=22, fontname='Arial', weight='bold')
+        im = ax.imshow(b1_fits, cmap='RdBu_r')
+        ax.set_title('Relative $B_1$ Map', fontsize=22, fontname='Arial', weight='bold')
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = fig.colorbar(im, cax=cax)
         cbar.ax.tick_params(labelsize=18)
-        cbar.set_label('$\Delta\\alpha$ (%)', fontsize=18)
+        cbar.set_label('$\\kappa$', fontsize=18)
         ax.axis('off')
         st.pyplot(fig)
-        plt.savefig(os.path.join(image_path, 'B1_Map_Raw.png'), dpi=300, bbox_inches="tight")
+        plt.savefig(os.path.join(image_path, 'Relative_B1_Map_Raw.png'), dpi=300, bbox_inches="tight")
         map_to_return = b1_fits
     else:
         # If a reference is provided, create a side-by-side comparison
@@ -56,29 +60,27 @@ def plot_damb1(b1_fits, reference_image, user_geometry, save_path):
             x_min, x_max = 0, b1_interp.shape[1]
 
         transparent_b1 = np.ma.masked_where(~combined_mask, b1_interp)
-        v_abs_max = np.nanmax(np.abs(b1_fits))
-        vmin, vmax = -v_abs_max, v_abs_max
         fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-        fig.suptitle('$B_1$ Map Visualization', fontsize=26, fontname='Arial', weight='bold')
+        fig.suptitle('$B_1$ Field Mapping', fontsize=26, fontname='Arial', weight='bold')
 
-        axs[0].imshow(b1_fits, cmap='RdBu', vmin=vmin, vmax=vmax)
-        axs[0].set_title('Raw $B_1$', fontsize=20, fontname='Arial', weight='bold')
+        axs[0].imshow(b1_fits, cmap='RdBu_r', vmin=vmin, vmax=vmax)
+        axs[0].set_title('Raw Relative $B_1$', fontsize=20, fontname='Arial', weight='bold')
         axs[0].axis('off')
 
         axs[1].imshow(reference_image[y_min:y_max, x_min:x_max], cmap='gray')
-        im1 = axs[1].imshow(transparent_b1[y_min:y_max, x_min:x_max], cmap='RdBu', alpha=0.9, vmin=vmin, vmax=vmax)
-        axs[1].set_title('Interpolated on Reference', fontsize=20, fontname='Arial', weight='bold')
+        im1 = axs[1].imshow(transparent_b1[y_min:y_max, x_min:x_max], cmap='RdBu_r', alpha=0.9, vmin=vmin, vmax=vmax)
+        axs[1].set_title('Anatomical Overlay', fontsize=20, fontname='Arial', weight='bold')
         axs[1].axis('off')
 
         divider = make_axes_locatable(axs[1])
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = fig.colorbar(im1, cax=cax)
         cbar.ax.tick_params(labelsize=18)
-        cbar.set_label('$\Delta\\alpha$ (%)', fontsize=18)
+        cbar.set_label('$\\kappa$', fontsize=18)
 
         fig.tight_layout(rect=[0, 0, 1, 0.95])
         st.pyplot(fig)
-        plt.savefig(os.path.join(image_path, 'B1_Maps.png'), dpi=300, bbox_inches="tight")
+        plt.savefig(os.path.join(image_path, 'Relative_B1_Maps.png'), dpi=300, bbox_inches="tight")
         map_to_return = transparent_b1
     return map_to_return
 
@@ -98,19 +100,22 @@ def plot_damb1_aha(b1_fits, reference_image, aha_segments, save_path):
     data = []
     for segment, coord_list in aha_segments.items():
         for (i, j) in coord_list:
-            val = b1_interp[i, j]
-            data.append({'Segment': segment, 'Flip Angle Error (°)': val})
+            if i < b1_interp.shape[0] and j < b1_interp.shape[1]:
+                val = b1_interp[i, j]
+                data.append({'Segment': segment, '$\\kappa$': val})
 
     df = pd.DataFrame(data)
 
     sns.set(style="whitegrid")
     fig, ax = plt.subplots(figsize=(9, 6))
     palette = sns.color_palette("husl", len(df['Segment'].unique()))
-    sns.boxplot(x='Segment', y='Flip Angle Error (°)', data=df, palette=palette, width=0.4, ax=ax)
+    sns.boxplot(x='Segment', y='$\\kappa$', data=df, palette=palette, width=0.4, ax=ax)
 
-    ax.set_title('Flip Angle Error by AHA Segment', fontsize=28, fontname='Arial', weight='bold')
+    ax.axhline(1.0, color='black', linestyle='--', linewidth=1.5, alpha=0.7)
+
+    ax.set_title('Relative Flip Angle by AHA Segment', fontsize=28, fontname='Arial', weight='bold')
     ax.set_xlabel('', fontsize=18)
-    ax.set_ylabel('Flip Angle Error (°)', fontsize=16, fontname='Arial')
+    ax.set_ylabel('$\\kappa$', fontsize=16, fontname='Arial')
     ax.tick_params(labelsize=14)
     fig.tight_layout()
 
