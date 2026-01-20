@@ -830,6 +830,9 @@ def do_processing_pipeline():
     if st.session_state.pipeline_status.get('mrf_gen_done') and not st.session_state.pipeline_status.get('recon_done', False):
         with st.spinner("Reconstructing data..."):
             tasks_to_run = [exp for exp in selection if exp not in st.session_state.recon_data]
+            # Sort tasks
+            task_order = ['cest', 'quesp', 'cest-mrf', 'wassr', 'damb1']
+            tasks_to_run.sort(key=task_order.index)
             for exp_type in tasks_to_run:
                 if exp_type == 'cest':
                     cest_type = submitted.get('cest_type')
