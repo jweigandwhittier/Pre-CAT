@@ -1,5 +1,7 @@
 # <img src="https://github.com/jweigandwhittier/Pre-CAT/blob/main/custom/icons/ksp.png" width="50"> Pre-CAT
 
+### For the most up-to-date version of **Pre-CAT**, please use  the `online` branch of this repository. 
+
 ## Welcome to Pre-CAT 
 
 **Pre-CAT** is a preclinical CEST-MRI data analysis toolbox and Streamlit webapp. **Pre-CAT** was originally designed for processing cardiac and abdominal CEST acquisitions using the radial FLASH sequence described by Weigand-Whittier et al., but has been expanded for use with all ParaVision 6/7 CEST acquisitions.
