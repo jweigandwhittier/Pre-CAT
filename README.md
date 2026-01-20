@@ -18,6 +18,14 @@ conda env create -f environment.yml
 conda activate pre-cat
 ```
 
+If the process gets stuck, please try switching the conda solver to libmamba:
+
+```sh
+conda config --set solver libmamba
+conda env create -f environment.yml
+conda activate pre-cat
+```
+
 Finally, [`BART`](https://mrirecon.github.io/bart/) is also required. Please download the most recent version and follow the instructions in the **README** file for installation.
 
 > ⚠ **Note for Mac Users:**  
