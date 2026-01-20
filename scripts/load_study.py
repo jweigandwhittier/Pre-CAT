@@ -25,6 +25,34 @@ from bart import bart
 import scripts.BrukerMRI as bruker
 from scripts.pre_processing import denoise_data
 
+# --- Find variables from method files --- #
+def find_offsets(data):
+    method = data.method
+    known_candidates = [
+    "Cest_Offsets",
+    "SatFreqList",
+    "Fp_SatOffset"
+    ]
+    for key in known_candidates:
+        if key in method:
+            return method[key]
+    candidates = []
+    keywords = ["offset", "freq", "sat"]
+    for key,  val in method.items():
+        if not isinstance(key, str):
+            continue
+        key_lower = key.lower()
+        if any(x in key_lower for x in keywords):
+            if hasattr(val, '__len__') and len(val) > 1 and isinstance(val[0], (int, float, np.number)):
+                candidates.append((key, val))
+    if candidates:
+        candidates.sort(key=lambda x: (len(x[1]), "cest" in x[0].lower()), reverse=True)
+        best_key, best_val = candidates[0]
+        st.warning(f"Standard offset variable not found. Guessing variable: '{best_key}'")
+        return best_val
+    return None
+
+
 # --- Reconstruction and data loading functions --- #
 def load_bruker_img(num, directory):
     """
@@ -41,18 +69,12 @@ def recon_bruker(num, directory):
     Loads CEST data from Bruker processed image data.
     """
     data = bruker.ReadExperiment(directory, num)
-    try:
-        offsets = np.round(data.method["Cest_Offsets"] / data.method["PVM_FrqWork"][0], 1)
-    except KeyError:
-        offsets = None # This handles the CEST-MRF case
+    raw_offsets = find_offsets(data)
+    raw_offsets = find_cest_offsets(data)
+    if raw_offsets is None:
+        raise ValueError(f"Could not find CEST offsets/frequencies in parameters for Scan {num}.")
+    offsets = np.round(raw_offsets / data.method["PVM_FrqWork"][0], 2)
     imgs = data.proc_data
-    #visu = data.visu
-    # Flips data to match raw (NU)FFT reconstruction, this DOES NOT ALWAYS WORK (return to this)
-    #orientation = np.array(visu['VisuCoreOrientation'].reshape(3,3))
-    #flip_y = orientation[0, 1] < 0 
-    #if flip_y == True:
-        #imgs = np.flip(imgs, axis=1)
-    # End flipping
     study = {"imgs": imgs, "offsets": offsets}
     return study
 
@@ -63,7 +85,10 @@ def recon_bart(num, directory):
     """
     data = bruker.ReadExperiment(directory, num)
     imgs = []
-    offsets = np.round(data.method["Cest_Offsets"] / data.method["PVM_FrqWork"][0], 2)
+    raw_offsets = find_cest_offsets(data)
+    if raw_offsets is None:
+        raise ValueError(f"Could not find CEST offsets/frequencies in parameters for Scan {num}.")
+    offsets = np.round(raw_offsets / data.method["PVM_FrqWork"][0], 2)
     traj = data.traj
     ksp = data.GenerateKspace()
     loading_bar = st.progress(0, text="Reconstructing images...")
@@ -93,8 +118,11 @@ def recon_quesp(num, directory):
     powers = data.method['Fp_SatPows']
     tsats = data.method['Fp_SatDur']
     trecs = data.method['Fp_TRDels']
-    offsets = data.method['Fp_SatOffset']
-    offsets_ppm = np.round(offsets / freq, 2)
+    raw_offsets = find_cest_offsets(data)
+    if raw_offsets is None:
+         # Fallback to the hardcoded one if the helper fails for some reason
+         raw_offsets = data.method.get('Fp_SatOffset', [])
+    offsets_ppm = np.round(raw_offsets / freq, 2)
     study = {"imgs": images, "powers": powers, "tsats": tsats, "trecs": trecs, "offsets": offsets_ppm}
     return study
 
