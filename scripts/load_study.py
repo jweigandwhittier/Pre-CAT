@@ -26,7 +26,7 @@ import scripts.BrukerMRI as bruker
 from scripts.pre_processing import denoise_data
 
 # --- Find variables from method files --- #
-def find_offsets(data):
+def find_cest_offsets(data):
     method = data.method
     known_candidates = [
     "Cest_Offsets",
@@ -69,7 +69,6 @@ def recon_bruker(num, directory):
     Loads CEST data from Bruker processed image data.
     """
     data = bruker.ReadExperiment(directory, num)
-    raw_offsets = find_offsets(data)
     raw_offsets = find_cest_offsets(data)
     if raw_offsets is None:
         raise ValueError(f"Could not find CEST offsets/frequencies in parameters for Scan {num}.")
