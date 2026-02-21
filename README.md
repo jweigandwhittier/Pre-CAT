@@ -11,6 +11,9 @@
 
 ## Requirements
 
+First, ensure that you have a working [`Miniconda`](https://www.anaconda.com/docs/getting-started/miniconda/main) install. 
+Mac users must also install command line tools by running `xcode-select --install` in the terminal
+
 A pre-prepared Conda environment is available in the `environment.yml` file. To install the environment, run:
 
 ```sh
@@ -18,12 +21,18 @@ conda env create -f environment.yml
 conda activate pre-cat
 ```
 
+
 If the process gets stuck, please try switching the conda solver to libmamba:
 
 ```sh
 conda config --set solver libmamba
 conda env create -f environment.yml
 conda activate pre-cat
+```
+
+After setting up the environment, run the CEST-MRF setup script from within your Pre-CAT directory:
+```sh
+python open-py-cest-mrf/setup.py
 ```
 
 Finally, [`BART`](https://mrirecon.github.io/bart/) is also required. Please download the most recent version and follow the instructions in the **README** file for installation.

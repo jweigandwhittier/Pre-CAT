@@ -101,7 +101,6 @@ def initialize_session_state():
         "reference": None,
         # Checklist for pipeline stages
         "pipeline_status": {
-            "install_done": False,
             "mrf_gen_done": False,
             "recon_done": False,
             "orientation_done": False,
@@ -253,44 +252,12 @@ def prepare_data_for_saving(pixel_maps, b1_map, wassr_map, t1_map, quesp_maps):
 # --- MRF required tool functions --- #
 def check_mrf_tools_installed():
     """
-    Checks if the required MRF packages are installed in the environment.
+    Validates the environment.
     """
-    cest_mrf_found = importlib.util.find_spec('cest_mrf') is not None
-    pypulseq_found = importlib.util.find_spec('pypulseq') is not None
-    bmcsimulator_found = importlib.util.find_spec('BMCSimulator') is not None
-    return cest_mrf_found and pypulseq_found and bmcsimulator_found
-
-def install_mrf_tools():
-    """
-    Runs the setup.py script for open-py-cest-mrf and displays the output.
-    """
-    setup_script_path = os.path.join('open-py-cest-mrf', 'setup.py')
-    with st.spinner("Installing MRF tools... This may take a few minutes. Please do not close the window."):
-        st.info("Starting installation of CEST-MRF tools...")
-        st_functions.message_logging("Starting installation of CEST-MRF tools...", msg_type = 'info')
-        log_container = st.empty()
-        log_text = ""
-        # Use sys.executable to ensure we use the python from the current conda environment
-        process = subprocess.Popen(
-            [sys.executable, setup_script_path, 'install'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            universal_newlines=True
-        )
-        for line in process.stdout:
-            log_text += line
-            log_container.code(log_text)
-        process.wait()
-        if process.returncode == 0:
-            st.success("MRF tools installed successfully!")
-            st_functions.message_logging("MRF tools installed successfully!")
-            st.session_state.pipeline_status['install_done'] = True
-            st.rerun()
-        else:
-            st.error("Installation failed. Please check the log above for details.")
-            log_container.code(log_text)
+    required_packages = ['cest_mrf', 'pypulseq', 'BMCSimulator']
+    packages_found = all(importlib.util.find_spec(pkg) is not None for pkg in required_packages)
+    if not packages_found:
+        return False
 
 # --- UI functions --- #
 def render_sidebar():
@@ -803,18 +770,8 @@ def do_processing_pipeline():
     submitted = st.session_state.submitted_data
     selection = [s.lower() for s in submitted.get('selection', [])]
 
-    # --- Stage 0: Check required package installations -- #
-    if not st.session_state.pipeline_status.get('install_done'):
-        if 'cest-mrf' in selection:
-            if not check_mrf_tools_installed():
-                install_mrf_tools()
-                return
-            else:
-                st_functions.message_logging('MRF tools found!')
-        st.session_state.pipeline_status['install_done'] = True
-
     # --- Stage 0.5: Set up all required MRF files --- #
-    if st.session_state.pipeline_status.get('install_done') and not st.session_state.pipeline_status.get('mrf_gen_done', False):
+    if not st.session_state.pipeline_status.get('mrf_gen_done', False):
         if 'cest-mrf' in selection:
             load_mrf.write_yaml(submitted['mrf_config'])
             load_mrf.seq_from_method(submitted['mrf_path'], submitted['folder_path'], submitted['mrf_config'])
@@ -1213,6 +1170,18 @@ def main():
         unsafe_allow_html=True
     )
     st.write("### A preclinical CEST-MRI analysis toolbox.")
+    if not check_mrf_tools_installed():
+        st.error('CEST-MRF tools not found.')
+        st.markdown("""
+        The required simulation libraries are missing or not compiled. 
+        
+        **To fix this:**
+        1. Open your terminal in the `Pre-CAT` folder.
+        2. Ensure your environment is active: `conda activate pre-cat`
+        3. Run the setup script: `python open-py-cest-mrf/setup.py`
+        4. Refresh this page.
+        """)
+        st.stop()
     # Main state machine
     with st.expander("Load data", expanded=not st.session_state.is_submitted):
         do_data_submission()
