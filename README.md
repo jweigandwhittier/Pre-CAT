@@ -32,7 +32,8 @@ conda activate pre-cat
 
 After setting up the environment, run the CEST-MRF setup script from within your Pre-CAT directory:
 ```sh
-python open-py-cest-mrf/setup.py
+cd open-py-cest-mrf
+python setup.py install
 ```
 
 Finally, [`BART`](https://mrirecon.github.io/bart/) is also required. Please download the most recent version and follow the instructions in the **README** file for installation.

@@ -258,6 +258,7 @@ def check_mrf_tools_installed():
     packages_found = all(importlib.util.find_spec(pkg) is not None for pkg in required_packages)
     if not packages_found:
         return False
+    return True
 
 # --- UI functions --- #
 def render_sidebar():
@@ -1178,8 +1179,9 @@ def main():
         **To fix this:**
         1. Open your terminal in the `Pre-CAT` folder.
         2. Ensure your environment is active: `conda activate pre-cat`
-        3. Run the setup script: `python open-py-cest-mrf/setup.py`
-        4. Refresh this page.
+        3. Navigate to the correct directory: `cd open-py-cest-mrf`
+        4. Run the setup script: `python setup.py install`
+        5. Close the app and rerun.
         """)
         st.stop()
     # Main state machine
