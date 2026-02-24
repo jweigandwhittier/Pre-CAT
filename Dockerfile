@@ -6,7 +6,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bart \
     && rm -rf /var/lib/apt/lists/*
 
-ENV BART_TOOLBOX_PATH=/usr/bin/bart
+RUN mkdir -p /opt/bart/python && \
+    curl -sSL https://codeberg.org/mrirecon/bart/raw/branch/master/python/bart.py -o /opt/bart/python/bart.py && \
+    curl -sSL https://codeberg.org/mrirecon/bart/raw/branch/master/python/cfl.py -o /opt/bart/python/cfl.py
+
+ENV BART_TOOLBOX_PATH=/opt/bart
+ENV TOOLBOX_PATH=/opt/bart
 
 RUN useradd -m -s /bin/bash streamlit_user
 WORKDIR /home/streamlit_user

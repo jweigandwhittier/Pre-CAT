@@ -11,6 +11,8 @@ services:
       - caddy-net
     environment:
       - STREAMLIT_SERVER_MAX_UPLOAD_SIZE=3000
+      - TOOLBOX_PATH=/opt/bart
+      - BART_TOOLBOX_PATH=/opt/bart
 
 networks:
   caddy-net:
