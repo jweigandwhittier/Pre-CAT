@@ -233,12 +233,14 @@ def ReadExperiment(path, ExpNum):
         path = path + "/"
     data = BrukerData(path, ExpNum)
 
-    exp_folder = os.path.join(path, str(ExpNum))
+    exp_folder = os.path.join(path, str(ExpNum)) 
 
     # parameter files
     data.method = ReadParamFile(os.path.join(exp_folder, "method")) # JWW
     data.acqp = ReadParamFile(os.path.join(exp_folder, "acqp")) # JWW
     reco_path = os.path.join(exp_folder, "pdata", "1", "reco") # JWW
+    if os.path.exists(reco_path):
+        data.reco = ReadParamFile(reco_path)
     #data.visu = ReadParamFile(path + str(ExpNum) + "/visu_pars")
 
     # processed data
