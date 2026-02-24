@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/bart/python && \
-    curl -sSL https://codeberg.org/mrirecon/bart/raw/branch/master/python/bart.py -o /opt/bart/python/bart.py && \
-    curl -sSL https://codeberg.org/mrirecon/bart/raw/branch/master/python/cfl.py -o /opt/bart/python/cfl.py
+    curl -sSL https://codeberg.org/mrirecon/bart/src/branch/master/python/bart.py -o /opt/bart/python/bart.py && \
+    curl -sSL https://codeberg.org/mrirecon/bart/src/branch/master/python/cfl.py -o /opt/bart/python/cfl.py
 
 ENV BART_TOOLBOX_PATH=/opt/bart
 ENV TOOLBOX_PATH=/opt/bart
