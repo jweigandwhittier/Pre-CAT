@@ -3,7 +3,10 @@ FROM continuumio/miniconda3:latest
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     swig \
+    bart \
     && rm -rf /var/lib/apt/lists/*
+
+ENV BART_TOOLBOX_PATH=/usr/bin/bart
 
 RUN useradd -m -s /bin/bash streamlit_user
 WORKDIR /home/streamlit_user
