@@ -1,7 +1,8 @@
 services:
-  precat_app:
+  pre-cat:
     build: .
-    container_name: precat_app
+    image: pre-cat:v1
+    container_name: pre-cat
     restart: unless-stopped
     deploy:
       resources:
