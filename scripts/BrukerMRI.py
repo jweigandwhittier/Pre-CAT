@@ -4,6 +4,8 @@ reconstruct Bruker MRI data.
 
 2014, Joerg Doepfert
 
+Changed some path logic, added radial CEST k-space loading.
+2023-2026, JWW
 """
 
 import os.path
@@ -194,39 +196,8 @@ class BrukerData:
             self.reco_data_norm = np.divide(abs(self.reco_data[:,1::2]), 
                                             abs(self.reco_data[:,0::2]))
             
-    # def _GenKspace_CEST_UTE(self):
-
-    #     complexValues = self.raw_fid
-
-    #     NTotalPoints = len(self.method["PVM_TrajKx"])
-    #     NPoints = self.method["PVM_EncMatrix"][0]
-    #     NRec = self.method["PVM_EncNReceivers"]
-    #     NFrames = self.method["PVM_NRepetitions"]
-    #     NProj = self.method["NPro"]
-        
-    #     BlockSize = len(complexValues)//NProj//NFrames
-    #     Data = np.reshape(complexValues,(BlockSize, NProj, NFrames), order='F')
-    #     ToDelete = NTotalPoints - NPoints
-    #     ##Split per receiver and delete extraneous points##
-    #     ToDelete = NTotalPoints - NPoints
-    #     Data_Ch1 = Data[0:NTotalPoints, :, :]
-    #     Data_Ch2 = Data[NTotalPoints:NTotalPoints*2, :, :]
-    #     Data_Ch3 = Data[NTotalPoints*2:NTotalPoints*3, :, :]
-    #     Data_Ch4 = Data[NTotalPoints*3:NTotalPoints*4, :, :]
-    #     K_Ch1 = Data_Ch1[ToDelete:, :, :]
-    #     K_Ch2 = Data_Ch2[ToDelete:, :, :]
-    #     K_Ch3 = Data_Ch3[ToDelete:, :, :]
-    #     K_Ch4 = Data_Ch4[ToDelete:, :, :]
-    #     ##Throw into a single array##
-    #     KSpoke = np.empty((NPoints, NProj, NRec, NFrames), dtype='complex128')
-    #     KSpoke[:,:,0,:] = K_Ch1
-    #     KSpoke[:,:,1,:] = K_Ch2
-    #     KSpoke[:,:,2,:] = K_Ch3
-    #     KSpoke[:,:,3,:] = K_Ch4
-        
-    #     return KSpoke
     
-    def _GenKspace_CEST_UTE(self):
+    def _GenKspace_CEST_UTE(self): # JWW added
         complexValues = self.raw_fid
     
         NTotalPoints = len(self.method["PVM_TrajKx"])
@@ -257,25 +228,26 @@ def ReadExperiment(path, ExpNum):
     data, and method and acqp parameters in a dictionary.
 
     """
+    path = str(path) # Change from Posix path, JWW
     if not path.endswith("/"):
         path = path + "/"
     data = BrukerData(path, ExpNum)
 
     # parameter files
-    data.method = ReadParamFile(path + str(ExpNum) + "/method")
-    data.acqp = ReadParamFile(path + str(ExpNum) + "/acqp")
-    data.reco = ReadParamFile(path + str(ExpNum) + "/pdata/1/reco")
+    data.method = ReadParamFile(os.path.join(exp_folder, "method")) # JWW
+    data.acqp = ReadParamFile(os.path.join(exp_folder, "acqp")) # JWW
+    reco_path = os.path.join(exp_folder, "pdata", "1", "reco") # JWW
     #data.visu = ReadParamFile(path + str(ExpNum) + "/visu_pars")
 
     # processed data
-    data.proc_data = ReadProcessedData(path + str(ExpNum) + "/pdata/1/2dseq",
-                                       data.reco,
-                                       data.acqp)
+    d2seq_path = os.path.join(exp_folder, "pdata", "1", "2dseq")
+    if os.path.exists(d2seq_path):
+        data.proc_data = ReadProcessedData(d2seq_path, data.reco, data.acqp)
     
     # raw trajectory
-    if os.path.isfile(path + str(ExpNum) + "/trajDC"):
-        data.traj = ReadTraj(path + str(ExpNum) + "/trajDC", 
-                         data.reco)
+    traj_path = os.path.join(exp_folder, "trajDC")
+    if os.path.isfile(traj_path):
+        data.traj = ReadTraj(traj_path, data.reco)
     
     # generate complex FID if software version is <PV360
     if 'PV-360' not in data.acqp['ACQ_sw_version']:   
