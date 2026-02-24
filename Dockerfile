@@ -11,6 +11,8 @@ RUN mkdir -p /opt/bart/python && \
     curl -sSL https://codeberg.org/mrirecon/bart/raw/branch/master/python/bart.py -o /opt/bart/python/bart.py && \
     curl -sSL https://codeberg.org/mrirecon/bart/raw/branch/master/python/cfl.py -o /opt/bart/python/cfl.py
 
+RUN ln -s /usr/bin/bart /opt/bart/bart
+
 ENV BART_TOOLBOX_PATH=/opt/bart
 ENV TOOLBOX_PATH=/opt/bart
 
