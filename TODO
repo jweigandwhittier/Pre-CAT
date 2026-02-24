@@ -1,2 +1,3 @@
 - Check outputs; are images being saved correctly?
 	- Consider changing WASSR saving; save full WASSR map and segmentwise averages?
+- Standardize plot interfaces (to MRF-style)
