@@ -1,3 +1,2 @@
-- Fix saved data, currently saving three ROIs for cardiac data
-- Identify issue with loading bars for final fitting step
 - Check outputs; are images being saved correctly?
+	- Consider changing WASSR saving; save full WASSR map and segmentwise averages?
