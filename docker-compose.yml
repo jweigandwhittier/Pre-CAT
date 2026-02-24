@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  precat_app:
+    build: .
+    container_name: precat_app
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    networks:
+      - caddy-net
+    environment:
+      - STREAMLIT_SERVER_MAX_UPLOAD_SIZE=3000
+
+networks:
+  caddy-net:
+    external: true

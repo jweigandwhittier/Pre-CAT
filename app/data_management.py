@@ -11,54 +11,46 @@ import zipfile
 import tempfile
 import shutil
 import streamlit as st
+from pathlib import Path
 
 class TempDirManager:
-    """
-    Manages session-specific temporary directories.
-    
-    Crucially, it uses a __del__ finalizer to ensure
-    these directories are cleaned up when the Streamlit
-    session is garbage collected (e.g., user closes tab or times out).
-    """
     def __init__(self):
+        # Store as None or Path objects
         self._upload_dir = None
         self._results_dir = None
     
     def get_upload_dir(self):
-        """Get or create the temp upload dir for this session."""
-        if self._upload_dir is None or not os.path.isdir(self._upload_dir):
-            self._upload_dir = tempfile.mkdtemp(prefix="precat_upload_")
+        """Get or create the temp upload dir as a resolved Path object."""
+        if self._upload_dir is None or not self._upload_dir.is_dir():
+            raw_path = tempfile.mkdtemp(prefix="precat_upload_")
+            self._upload_dir = Path(raw_path).resolve()
         return self._upload_dir
     
     def get_results_dir(self):
-        """Get or create the temp results dir for this session."""
-        if self._results_dir is None or not os.path.isdir(self._results_dir):
-            self._results_dir = tempfile.mkdtemp(prefix="precat_results_")
+        """Get or create the temp results dir as a resolved Path object."""
+        if self._results_dir is None or not self._results_dir.is_dir():
+            raw_path = tempfile.mkdtemp(prefix="precat_results_")
+            self._results_dir = Path(raw_path).resolve()
         return self._results_dir
 
     def _cleanup(self):
         """Safely removes the directories."""
-        if self._upload_dir and os.path.isdir(self._upload_dir):
-            try:
-                shutil.rmtree(self._upload_dir)
-            except Exception as e:
-                # Log this error for debugging on your server
-                print(f"Error cleaning up {self._upload_dir}: {e}")
-        
-        if self._results_dir and os.path.isdir(self._results_dir):
-            try:
-                shutil.rmtree(self._results_dir)
-            except Exception as e:
-                print(f"Error cleaning up {self._results_dir}: {e}")
+        for d in [self._upload_dir, self._results_dir]:
+            if d and d.is_dir():
+                try:
+                    shutil.rmtree(d)
+                except Exception as e:
+                    # On a home server, this prints to your Docker logs/terminal
+                    print(f"Error cleaning up {d}: {e}")
 
     def cleanup_now(self):
-        """Forcibly clean up and reset paths (used by 'Reset' button)."""
+        """Forcibly clean up and reset paths."""
         self._cleanup()
         self._upload_dir = None
         self._results_dir = None
 
     def __del__(self):
-        """Finalizer called by Python garbage collector on session end."""
+        """Finalizer called by Python garbage collector."""
         self._cleanup()
 
 def create_zip_in_memory(directory_path):

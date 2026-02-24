@@ -36,20 +36,26 @@ def do_data_submission():
         if uploaded_zip:
             try:
                 # Create a temp directory to extract the zip file
-                temp_upload_dir = manager.get_upload_dir()
+                temp_upload_dir = Path(manager.get_upload_dir()).resolve()
                 with zipfile.ZipFile(uploaded_zip, 'r') as zip_ref:
+                    # Add some security checks
+                    total_size = sum(file.file_size for file in zip_ref.infolist())
+                    if total_size > 3*1024*1024*1024:
+                        raise ValueError("Uncompressed data exceeds 3GB limit.")
+                    for member in zip_ref.namelist():
+                        target_path = (temp_upload_dir / member).resolve()
+                        if temp_upload_dir not in target_path.parents and temp_upload_dir != target_path:
+                            raise PermissionError(f"Blocked malicious path: {member}")
                     zip_ref.extractall(temp_upload_dir)
-                expected_folder_name = Path(uploaded_zip.name).stem 
-                potential_path = os.path.join(temp_upload_dir, expected_folder_name)
-                if os.path.isdir(potential_path):
-                    folder_path = potential_path
-                else:
-                    folder_path = temp_upload_dir
-                base_folder_name = os.path.basename(folder_path)
-                # st.success(f"Successfully set study path: {folder_path}")
+                safe_zip_name = os.path.basename(uploaded_zip.name)
+                expected_folder_name = Path(safe_zip_name).stem
+                potential_path = temp_upload_dir / expected_folder_name
+                folder_path = potential_path if potential_path.is_dir() else temp_upload_dir
+                base_folder_name = folder_path.name
             except Exception as e:
-                st.error(f"Error processing .zip file: {e}")
-                folder_path = None # Ensure processing doesn't continue
+                st.error(f"Security/Processing Error: {e}")
+                manager.cleanup_now()
+                folder_path = None
 
         save_suffix = st.text_input('Output suffix (optional)',
             placeholder = 'Liver_5uT_Radial_v1',
@@ -64,9 +70,6 @@ def do_data_submission():
                 final_save_name = base_folder_name
             # Display the final name to the user
             st.success(f"Final output name will be: **{final_save_name}.zip**")
-
-        # folder_path = st.text_input('Input data path', placeholder='User/Documents/MRI_Data/Project/Scan_ID')
-        # save_path = st.text_input('Save processed data as', placeholder='Liver_5uT_Radial')
         
         cest_validation = True
         quesp_validation = True
