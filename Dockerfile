@@ -1,6 +1,6 @@
 FROM continuumio/miniconda3:latest
 
-RUN adduser -D precat_user
+RUN useradd -m --disabled-password --gecos "" precat_user
 WORKDIR /home/precat_user
 
 COPY environment.yml .
