@@ -1,4 +1,4 @@
-FROM frolvlad/alpine-miniconda3:python3.10
+FROM continuumio/miniconda3:latest
 
 RUN adduser -D precat_user
 WORKDIR /home/precat_user
