@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd -m -s /bin/bash streamlit_user
 WORKDIR /home/streamlit_user
 
-COPY environment.yml .
+COPY environment_docker.yml .
 
 RUN conda env update -n base -f environment_docker.yml && conda clean -afy
 
