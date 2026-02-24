@@ -11,6 +11,7 @@ from sklearn.metrics import r2_score
 import pandas as pd
 import streamlit as st
 from custom import st_functions
+from custom.st_functions import time_it
 
 # --- Constants --- #
 # Proton gyromagnetic ratio (rad/T/s)
@@ -61,6 +62,7 @@ def calc_proton_volume_fraction(conc, num_protons):
     return (num_protons * conc) / (111e3)
 
 # --- Fitting functions --- #
+@time_it
 def fit_quesp_map(quesp_data, t1_pixel_fits, masks, fit_type, fixed_fb=None):
     """
     Performs a pixel-wise QUESP fit for each ROI, with a single unified progress bar.
@@ -209,6 +211,7 @@ def fit_quesp_map(quesp_data, t1_pixel_fits, masks, fit_type, fixed_fb=None):
     st_functions.message_logging("QUESP fitting complete!")
     return results_by_roi
 
+@time_it
 def fit_t1_map(t1_data, masks):
     """
     Performs a pixel-wise T1 fit for each ROI, with a single unified progress bar.
@@ -243,4 +246,15 @@ def fit_t1_map(t1_data, masks):
         progress_bar.progress((i + 1) / total, text="Fitting T₁ map...")
     progress_bar.progress(1.0, text="T₁ map fitting complete.")
     progress_bar.empty()
+    return pixelwise_fits
+
+def fixed_t1_map(fixed_t1, masks):
+    pixelwise_fits = {}
+    all_coords = []
+    for label, mask in masks.items():
+        coords = np.argwhere(mask)
+        all_coords.extend([(label, tuple(coord)) for coord in coords])
+        pixelwise_fits[label] = []
+    for i, (label, (y, x)) in enumerate(all_coords):
+        pixelwise_fits[label].append(fixed_t1)
     return pixelwise_fits

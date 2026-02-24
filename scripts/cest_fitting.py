@@ -10,6 +10,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 from scipy.optimize import curve_fit
 from scipy.interpolate import CubicSpline
+from custom.st_functions import time_it
 
 # --- Curve fitting parameters. Feel free to modify, results not guaranteed. --- #
 ###Pre-correction###
@@ -230,6 +231,7 @@ def two_step(spectrum, offsets, custom_contrasts = None):
     return {'Fit_Params': fit_parameters, 'Data_Dict': data_dict,
             'Contrasts': contrasts, 'Residuals': spectrum_region - total_fit_region, 'RMSE': rmse}
 
+@time_it
 def fit_all_rois(spectra_by_roi, offsets, custom_contrasts):
     """
     Iterates through all ROIs and applies the two-step fit.
@@ -239,6 +241,7 @@ def fit_all_rois(spectra_by_roi, offsets, custom_contrasts):
         fits[roi] = two_step(spectrum, offsets, custom_contrasts)
     return fits
 
+@time_it
 def fit_all_pixels(spectra_by_pixel, offsets, custom_contrasts):
     """
     Iterates through all pixels in a mask and applies the two-step fit.
@@ -259,6 +262,7 @@ def fit_all_pixels(spectra_by_pixel, offsets, custom_contrasts):
     return pixel_fits
 
 # --- B1 fitting functions --- #
+@time_it
 def fit_b1(imgs, nominal_flip):
     """Calculates the B1 error map from DAMB1 images."""
     theta = imgs[:, :, 0]
@@ -270,11 +274,12 @@ def fit_b1(imgs, nominal_flip):
     
     theta_actual_rad = np.arccos(ratio)
     theta_actual_deg = np.rad2deg(theta_actual_rad)
-    flip_error = nominal_flip - theta_actual_deg
+    flip_error = theta_actual_deg / nominal_flip
     
     return np.nan_to_num(np.squeeze(flip_error))
     
 # --- WASSR fitting functions --- #
+@time_it
 def fit_wassr_full(imgs, offsets, user_geometry):
     """
     Performs full (unmasked) WASSR fitting and returns the full B0 map as well as maskes results.
@@ -324,6 +329,7 @@ def fit_wassr_full(imgs, offsets, user_geometry):
             pixelwise[label] = [b0_full_map[r, c] for r, c in valid_coords]
     return pixelwise, b0_full_map
 
+@time_it
 def fit_wassr_masked(imgs, offsets, user_geometry):
     """
     Performs masked WASSR fitting for B0 shifts.

@@ -11,7 +11,9 @@ import scripts.BrukerMRI as bruker
 import pypulseq as pp
 import streamlit as st
 from custom import st_functions
+from custom.st_functions import time_it
 
+@time_it
 def generate_dictionary(cfg):
 	"""
 	Generate MRF dictionary.
@@ -35,6 +37,7 @@ def write_yaml(cfg):
 	st.success(f"YAML configuration saved to: {full_path}")
 	st_functions.message_logging(f"YAML configuration saved to: {full_path}")
 
+@time_it
 def seq_from_method(num, directory, cfg):
 	"""
 	Create Pypulseq object from method and config file parameters.

@@ -72,6 +72,7 @@ def pixelwise_mapping(image, pixelwise_fits, user_geometry, custom_contrasts, sm
                     fig = plot_contrast(image, contrasts[i + 1], titles[i + 1])
                     plt.savefig(image_path + '/' + titles[i + 1] + '_Contrast_Map.png', dpi=300, bbox_inches="tight")
                     st.pyplot(fig)
+    return contrast_images
 
 def show_segmentation(image, mask, labeled_segments, save_path):
     """

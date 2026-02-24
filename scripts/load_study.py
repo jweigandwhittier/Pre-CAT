@@ -12,6 +12,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from scipy.interpolate import interpn
 from custom import st_functions
+from custom.st_functions import time_it
 
 if 'BART_TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['BART_TOOLBOX_PATH']):
 	sys.path.append(os.path.join(os.environ['BART_TOOLBOX_PATH'], 'python'))
@@ -22,6 +23,35 @@ else:
 
 from bart import bart
 import scripts.BrukerMRI as bruker
+from scripts.pre_processing import denoise_data
+
+# --- Find variables from method files --- #
+def find_cest_offsets(data):
+    method = data.method
+    known_candidates = [
+    "Cest_Offsets",
+    "SatFreqList",
+    "Fp_SatOffset"
+    ]
+    for key in known_candidates:
+        if key in method:
+            return method[key]
+    candidates = []
+    keywords = ["offset", "freq", "sat"]
+    for key,  val in method.items():
+        if not isinstance(key, str):
+            continue
+        key_lower = key.lower()
+        if any(x in key_lower for x in keywords):
+            if hasattr(val, '__len__') and len(val) > 1 and isinstance(val[0], (int, float, np.number)):
+                candidates.append((key, val))
+    if candidates:
+        candidates.sort(key=lambda x: (len(x[1]), "cest" in x[0].lower()), reverse=True)
+        best_key, best_val = candidates[0]
+        st.warning(f"Standard offset variable not found. Guessing variable: '{best_key}'")
+        return best_val
+    return None
+
 
 # --- Reconstruction and data loading functions --- #
 def load_bruker_img(num, directory):
@@ -32,34 +62,32 @@ def load_bruker_img(num, directory):
     imgs = data.proc_data
     imgs = np.rot90(imgs, k=2) # Rotates image, may not be necessary 
     return imgs
-    
+
+@time_it    
 def recon_bruker(num, directory):
     """
     Loads CEST data from Bruker processed image data.
     """
     data = bruker.ReadExperiment(directory, num)
-    try:
-        offsets = np.round(data.method["Cest_Offsets"] / data.method["PVM_FrqWork"][0], 1)
-    except KeyError:
-        offsets = None # This handles the CEST-MRF case
+    raw_offsets = find_cest_offsets(data)
+    if raw_offsets is None:
+        raise ValueError(f"Could not find CEST offsets/frequencies in parameters for Scan {num}.")
+    offsets = np.round(raw_offsets / data.method["PVM_FrqWork"][0], 2)
     imgs = data.proc_data
-    #visu = data.visu
-    # Flips data to match raw (NU)FFT reconstruction, this DOES NOT ALWAYS WORK (return to this)
-    #orientation = np.array(visu['VisuCoreOrientation'].reshape(3,3))
-    #flip_y = orientation[0, 1] < 0 
-    #if flip_y == True:
-        #imgs = np.flip(imgs, axis=1)
-    # End flipping
     study = {"imgs": imgs, "offsets": offsets}
     return study
 
+@time_it
 def recon_bart(num, directory):
     """
     Reconstructs radial CEST data using BART.
     """
     data = bruker.ReadExperiment(directory, num)
     imgs = []
-    offsets = np.round(data.method["Cest_Offsets"] / data.method["PVM_FrqWork"][0], 2)
+    raw_offsets = find_cest_offsets(data)
+    if raw_offsets is None:
+        raise ValueError(f"Could not find CEST offsets/frequencies in parameters for Scan {num}.")
+    offsets = np.round(raw_offsets / data.method["PVM_FrqWork"][0], 2)
     traj = data.traj
     ksp = data.GenerateKspace()
     loading_bar = st.progress(0, text="Reconstructing images...")
@@ -77,6 +105,7 @@ def recon_bart(num, directory):
     study = {"imgs": imgs, "offsets": offsets}
     return study
 
+@time_it
 def recon_quesp(num, directory):
     """
     Retrieves and organizes QUESP processed image data.
@@ -88,16 +117,21 @@ def recon_quesp(num, directory):
     powers = data.method['Fp_SatPows']
     tsats = data.method['Fp_SatDur']
     trecs = data.method['Fp_TRDels']
-    offsets = data.method['Fp_SatOffset']
-    offsets_ppm = np.round(offsets / freq, 2)
+    raw_offsets = find_cest_offsets(data)
+    if raw_offsets is None:
+         # Fallback to the hardcoded one if the helper fails for some reason
+         raw_offsets = data.method.get('Fp_SatOffset', [])
+    offsets_ppm = np.round(raw_offsets / freq, 2)
     study = {"imgs": images, "powers": powers, "tsats": tsats, "trecs": trecs, "offsets": offsets_ppm}
     return study
 
-def process_quesp(recon_data):
+def process_quesp(recon_data, denoise):
     """
     Performs normalization steps on raw QUESP data.
     """
     images = recon_data["imgs"]
+    if denoise == True:
+        images = denoise_data(images)
     powers = recon_data["powers"]
     tsats = recon_data["tsats"]
     trecs =  recon_data["trecs"]
@@ -148,6 +182,7 @@ def calc_mtr(images, powers, tsats, trecs, offsets_ppm):
             mtr_maps.append(map_data)
     return mtr_maps
 
+@time_it
 def recon_t1map(num, directory):
     """
     Load images and TRs for T1 mapping from VTR acquisition.
@@ -155,6 +190,7 @@ def recon_t1map(num, directory):
     data = bruker.ReadExperiment(directory, num)
     return {"imgs": data.proc_data, "trs": data.method['MultiRepTime']}
 
+@time_it
 def recon_damb1(directory, theta_path, two_theta_path):
     """
     Reconstructs B1 maps from two double angle (DAMB1) experiments.
@@ -187,6 +223,7 @@ def flip_image_stack_vertically(image_stack):
     """
     return np.flip(image_stack, axis=1)
 
+@time_it
 def thermal_drift(recon_data):
     """
     Performs thermal drift correction on an image stack.

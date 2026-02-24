@@ -29,6 +29,8 @@ def plot_wassr_aha(wassr_aha_fits, save_path):
     palette = sns.color_palette("husl", len(df['Segment'].unique()))
     sns.boxplot(x='Segment', y='B0 Shift (ppm)', data=df, palette=palette, width=0.4, ax=ax)
 
+    ax.axhline(0, color='black', linestyle='--', linewidth=1.5, alpha=0.7)
+
     ax.set_title('B$_0$ Shift by AHA Segment', fontsize=28, fontname='Arial', weight='bold')
     ax.set_xlabel('', fontsize=18)
 
@@ -92,6 +94,8 @@ def plot_wassr(image, user_geometry, wassr_masked_fits, save_path, wassr_full_ma
         cbar.set_label('B$_0$ Shift (ppm)', fontname='Arial', fontsize=16)
 
         fig.tight_layout(rect=[0, 0, 1, 0.95])
+
+        final_map_to_return = transparent_b0_overlay
         
     # Case 2: Only masked data is available
     else:
@@ -131,6 +135,8 @@ def plot_wassr(image, user_geometry, wassr_masked_fits, save_path, wassr_full_ma
         cbar.ax.tick_params(labelsize=14)
         cbar.set_label('B$_0$ Shift (ppm)', fontname='Arial', fontsize=16)
         ax.axis('off')
+        final_map_to_return = transparent_b0
 
     st.pyplot(fig)
     plt.savefig(os.path.join(image_path, 'B0_Map_Comparison.png'), dpi=300, bbox_inches="tight")
+    return final_map_to_return

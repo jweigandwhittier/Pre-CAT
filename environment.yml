@@ -1,10 +1,10 @@
 name: pre-cat
 channels:
   - conda-forge
-  - defaults
+  - nodefaults
 dependencies:
   # Core requirements
-  - python = 3.9.16
+  - python = 3.10
   - pip
   - git
 
@@ -13,7 +13,7 @@ dependencies:
   - swig
 
   # Main application and analysis packages
-  - numpy
+  - numpy=1.23.5
   - scipy
   - matplotlib
   - pydicom
@@ -30,5 +30,5 @@ dependencies:
 
   # Pip-installed packages
   - pip:
-    - bmctool
     - streamlit-drawable-canvas
+    - bmctool==0.5.0

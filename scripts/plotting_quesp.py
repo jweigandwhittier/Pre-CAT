@@ -59,6 +59,7 @@ def plot_t1_map(t1_fits, reference_image, masks, save_path):
     if not os.path.isdir(image_path):
     	os.makedirs(image_path)
     plt.savefig(os.path.join(image_path, 'T1_Maps.png'), dpi=300, bbox_inches="tight")
+    return t1_map_masked
 
 def plot_quesp_maps(quesp_fits, masks, reference_image, save_path, plotmin, plotmax):
     """
@@ -80,6 +81,9 @@ def plot_quesp_maps(quesp_fits, masks, reference_image, save_path, plotmin, plot
     combined_mask = np.zeros_like(reference_image, dtype=bool)
     for mask in masks.values():
         combined_mask = np.logical_or(combined_mask, mask)
+
+    # Empty list for saving maps
+    maps_to_return = {}
 
     # Iterate through each chemical pool to create a set of maps
     for pool_name in all_pool_names:
@@ -151,6 +155,14 @@ def plot_quesp_maps(quesp_fits, masks, reference_image, save_path, plotmin, plot
         if not os.path.isdir(image_path):
         	os.makedirs(image_path)
         plt.savefig(os.path.join(image_path, f'{pool_name}_QUESP_Maps.png'), dpi=300, bbox_inches="tight")
+
+        maps_to_return[pool_name] = {
+            'fb_map': fb_masked,
+            'kb_map': kb_masked,
+            'r2_map': r2_masked
+        }
+    
+    return maps_to_return
 
 
 def calculate_quesp_stats(quesp_fits, t1_fits, statmin, statmax):

@@ -15,10 +15,8 @@ b0_inhom = 0 # B0 inhomogeneity
 rel_b1 = 1 # Relative B1
 
 # ## Water pool (a)
-#t1 = np.arange(1900.0, 3200.0 + 100, 100) / 1000  # (s)
-#t2 = np.arange(400.0, 1350.0 + 50, 50) / 1000  # (s)
-t1 = np.arange(2679.0, 2681.0, 2) / 1000  # (s)
-t2 = np.arange(1080.0, 1100.0, 2) / 1000  # (s)
+t1 = np.arange(1900.0, 3200.0 + 100, 100) / 1000  # (s)
+t2 = np.arange(400.0, 1350.0 + 50, 50) / 1000  # (s)
 
 # ## Solute pool (b)
 pool_b_name = 'Cr'

@@ -7,7 +7,8 @@ Created on Wed Jan  8 10:36:34 2025
 
 Credit for all cat photos goes to Clara Flynn.
 """
-
+import time
+import functools
 import streamlit as st
 import pickle
 import os
@@ -267,14 +268,14 @@ def save_raw(session_state):
     with open(pickle_path, "wb") as f:
         pickle.dump(dict(session_state), f)
 
-def save_df_to_csv(dataframe, save_path):
+def save_df_to_csv(dataframe, save_path, type):
     """
     Save QUESP dataframe to CSV.
     """
     data_path = os.path.join(save_path, 'Raw')
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
-    dataframe.to_csv(os.path.join(data_path, 'QUESP.csv'), index=False)       
+    dataframe.to_csv(os.path.join(data_path, f'{type}.csv'), index=False)       
 
 def message_logging(message, msg_type='success'):
     """
@@ -283,4 +284,28 @@ def message_logging(message, msg_type='success'):
     if not isinstance(message, str):
         str(message)
     st.session_state.log_messages.append((message, msg_type))
+
+def time_it(func):
+    """
+    A decorator that times the execution of a function and logs the
+    result to st.session_state.timing_log.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Initialize the log if it doesn't exist
+        if "timing_log" not in st.session_state:
+            st.session_state.timing_log = []
+        # Run the function and time it
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+        
+        # Log the result as a dictionary
+        st.session_state.timing_log.append({
+            "Processing Step": func.__name__,
+            "Duration (s)": duration
+        })
+        return result
+    return wrapper
 

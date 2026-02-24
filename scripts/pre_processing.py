@@ -5,13 +5,22 @@ Created on Mon Jun  9 15:07:25 2025
 
 @author: jonah
 """
+import os
+import sys
 import numpy as np
 import streamlit as st
 from scipy.ndimage import uniform_filter1d
 from sklearn.decomposition import PCA
 import scripts.BrukerMRI as bruker 
+if 'BART_TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['BART_TOOLBOX_PATH']):
+	sys.path.append(os.path.join(os.environ['BART_TOOLBOX_PATH'], 'python'))
+elif 'TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['TOOLBOX_PATH']):
+	sys.path.append(os.path.join(os.environ['TOOLBOX_PATH'], 'python'))
+else:
+	raise RuntimeError("BART_TOOLBOX_PATH is not set correctly!")
 from bart import bart 
 from custom import st_functions
+from custom.st_functions import time_it
 
 # --- Constants (tunable) --- #
 SPIKE_THRESHOLD_STD = 0.5
@@ -28,6 +37,7 @@ def recon(ksp, traj):
     img = np.squeeze(img)
     return img
 
+@time_it
 def motion_correction(ksp, traj, method, experiment_type):
     """
     Performs motion correction by identifying and deleting corrupted segments.
@@ -94,6 +104,7 @@ def motion_correction(ksp, traj, method, experiment_type):
     loading_bar.progress(1.0, text="Motion correction complete.")
     return np.stack(filtered_images_list, axis=-1)
 
+@time_it
 def denoise_data(image_stack):
     """
     Denoises a stack of images using Global PCA.
