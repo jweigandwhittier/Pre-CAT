@@ -5,11 +5,19 @@ Created on Mon Jun  9 15:07:25 2025
 
 @author: jonah
 """
+import os
+import sys
 import numpy as np
 import streamlit as st
 from scipy.ndimage import uniform_filter1d
 from sklearn.decomposition import PCA
 import scripts.BrukerMRI as bruker 
+if 'BART_TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['BART_TOOLBOX_PATH']):
+	sys.path.append(os.path.join(os.environ['BART_TOOLBOX_PATH'], 'python'))
+elif 'TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['TOOLBOX_PATH']):
+	sys.path.append(os.path.join(os.environ['TOOLBOX_PATH'], 'python'))
+else:
+	raise RuntimeError("BART_TOOLBOX_PATH is not set correctly!")
 from bart import bart 
 from custom import st_functions
 from custom.st_functions import time_it
