@@ -1,14 +1,16 @@
 FROM continuumio/miniconda3:latest
 
-RUN conda install -n base -c conda-forge mamba -y
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    swig \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash streamlit_user
 WORKDIR /home/streamlit_user
 
 COPY environment.yml .
 
-RUN mamba env update -n base -f environment.yml && \
-    mamba clean -afy
+RUN conda env update -n base -f environment_docker.yml && conda clean -afy
 
 COPY . .
 
