@@ -125,17 +125,23 @@ def calc_spectra(imgs, user_geometry):
             spectra[label] = np.mean(pixels, axis=0)
     return spectra
 
-def calc_spectra_pixelwise(imgs, masks):
+def calc_spectra_pixelwise(imgs, user_geometry):
     """
     Calculates the spectrum for each individual pixel within the given masks.
     """
     spectra_by_label = {}
-    for label, mask in masks.items():
-        # Get coordinates of all pixels in the mask
+    masks = user_geometry['masks']
+    if user_geometry['aha']:
+        label = 'lv'
+        mask = masks[label]
         y_coords, x_coords = np.where(mask)
-        # Extract the spectral data for these pixels across all offsets
         pixel_spectra = imgs[y_coords, x_coords, :]
         spectra_by_label[label] = pixel_spectra
+    else:
+        for label, mask in masks.items():
+            y_coords, x_coords = np.where(mask)
+            pixel_spectra = imgs[y_coords, x_coords, :]
+            spectra_by_label[label] = pixel_spectra
     return spectra_by_label
 
 def two_step(spectrum, offsets, custom_contrasts = None):

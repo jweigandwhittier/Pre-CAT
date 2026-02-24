@@ -19,6 +19,7 @@ elif 'TOOLBOX_PATH' in os.environ and os.path.exists(os.environ['TOOLBOX_PATH'])
 else:
 	raise RuntimeError("BART_TOOLBOX_PATH is not set correctly!")
 from bart import bart 
+from scripts import load_study
 from custom import st_functions
 from custom.st_functions import time_it
 
@@ -38,13 +39,12 @@ def recon(ksp, traj):
     return img
 
 @time_it
-def motion_correction(ksp, traj, method, experiment_type):
+def motion_correction(ksp, traj, method, experiment_type, offsets_ppm):
     """
     Performs motion correction by identifying and deleting corrupted segments.
     """
     points, n_spokes, n_coils, n_offsets = ksp.shape
     seg = method['Num_Traj_per_Seg']
-    offsets_ppm = np.round(method["Cest_Offsets"] / (method["PVM_FrqWork"][0]), 2)
     n_segments = n_spokes // seg
     if experiment_type == 'cest':
         ranges = [(-4.0, -1.4), (1.4, 4.0)]
@@ -139,10 +139,11 @@ def run_radial_preprocessing(directory, num_exp, use_pca, experiment_type = 'ces
     ksp = exp.GenerateKspace()
     traj = exp.traj
     method = exp.method
-    offsets = np.round(method["Cest_Offsets"] / (method["PVM_FrqWork"][0]), 2)
+    offsets_hz = load_study.find_cest_offsets(exp)
+    offsets_ppm = np.round(offsets_hz / (method["PVM_FrqWork"][0]), 2)
     
     # 2. Motion Correction
-    motion_corrected_stack = motion_correction(ksp, traj, method, experiment_type)
+    motion_corrected_stack = motion_correction(ksp, traj, method, experiment_type, offsets_ppm)
     
     # 3. Optional Denoising
     final_stack = motion_corrected_stack
@@ -150,4 +151,4 @@ def run_radial_preprocessing(directory, num_exp, use_pca, experiment_type = 'ces
         st.info("Denoising data with PCA...")
         final_stack = denoise_data(motion_corrected_stack)
 
-    return {"imgs": final_stack, "offsets": offsets}
+    return {"imgs": final_stack, "offsets": offsets_ppm}

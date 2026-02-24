@@ -219,7 +219,7 @@ def do_processing_pipeline():
                 spectra = cest_fitting.calc_spectra(proc_data['imgs'], st.session_state.user_geometry)
                 st.session_state.fits['cest'] = cest_fitting.fit_all_rois(spectra, proc_data['offsets'], submitted.get('custom_contrasts'))
                 if submitted.get('pixelwise'):
-                    pixel_spectra = cest_fitting.calc_spectra_pixelwise(proc_data['imgs'], st.session_state.user_geometry['masks'])
+                    pixel_spectra = cest_fitting.calc_spectra_pixelwise(proc_data['imgs'], st.session_state.user_geometry)
                     st.session_state.fits['cest_pixelwise'] = cest_fitting.fit_all_pixels(pixel_spectra, proc_data['offsets'], submitted.get('custom_contrasts'))
                 if submitted['organ'] == 'Cardiac':
                     cest_fits = st.session_state.fits.get('cest', {})
