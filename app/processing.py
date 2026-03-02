@@ -60,7 +60,7 @@ def do_processing_pipeline():
                             )
                     else: # Rectilinear
                         st.session_state.recon_data['cest'] = load_study.recon_bruker(
-                            submitted['cest_path'], submitted['folder_path']
+                            submitted['cest_path'], submitted['folder_path'])
                     if use_pca:
                         # Apply PCA denoising
                         denoised_images = pre_processing.denoise_data(recon_data['imgs'])
