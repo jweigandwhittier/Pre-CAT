@@ -43,34 +43,29 @@ def do_processing_pipeline():
                 if exp_type == 'cest':
                     cest_type = submitted.get('cest_type')
                     use_pca = submitted.get('pca', False)
+
                     if cest_type == 'Radial':
                         use_moco = submitted.get('moco_cest', False)
                         if use_moco:
-                            # With motion correction (with or without PCA)
-                            st.session_state.recon_data['cest'] = pre_processing.run_radial_preprocessing(
+                            recon_results = pre_processing.run_radial_preprocessing(
                                 submitted['folder_path'],
                                 submitted['cest_path'],
-                                use_pca,
+                                use_pca, 
                                 exp_type
                             )
                         else:
-                            # Without motion correction
-                            recon_data = load_study.recon_bart(
+                            recon_results = load_study.recon_bart(
                                 submitted['cest_path'], submitted['folder_path']
                             )
                     else: # Rectilinear
-                        st.session_state.recon_data['cest'] = load_study.recon_bruker(
-                            submitted['cest_path'], submitted['folder_path'])
-                    if use_pca:
-                        # Apply PCA denoising
-                        denoised_images = pre_processing.denoise_data(recon_data['imgs'])
-                        st.session_state.recon_data['cest'] = {
-                            "imgs": denoised_images,
-                            "offsets": recon_data['offsets']
-                        }
-                    else:
-                        # Just reconstruction
-                        st.session_state.recon_data['cest'] = recon_data
+                        recon_results = load_study.recon_bruker(
+                            submitted['cest_path'], submitted['folder_path']
+                        )
+
+                    if use_pca and not use_moco: 
+                        recon_results['imgs'] = pre_processing.denoise_data(recon_results['imgs'])
+                    
+                    st.session_state.recon_data['cest'] = recon_results
 
                 if exp_type == 'wassr':
                     wassr_type = submitted.get('wassr_type')
