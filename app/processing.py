@@ -43,9 +43,9 @@ def do_processing_pipeline():
                 if exp_type == 'cest':
                     cest_type = submitted.get('cest_type')
                     use_pca = submitted.get('pca', False)
+                    use_moco = submitted.get('moco_cest', False)
 
                     if cest_type == 'Radial':
-                        use_moco = submitted.get('moco_cest', False)
                         if use_moco:
                             recon_results = pre_processing.run_radial_preprocessing(
                                 submitted['folder_path'],
