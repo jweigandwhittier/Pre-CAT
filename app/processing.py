@@ -58,20 +58,20 @@ def do_processing_pipeline():
                             recon_data = load_study.recon_bart(
                                 submitted['cest_path'], submitted['folder_path']
                             )
-                            if use_pca:
-                                # Apply PCA denoising
-                                denoised_images = pre_processing.denoise_data(recon_data['imgs'])
-                                st.session_state.recon_data['cest'] = {
-                                    "imgs": denoised_images,
-                                    "offsets": recon_data['offsets']
-                                }
-                            else:
-                                # Just reconstruction
-                                st.session_state.recon_data['cest'] = recon_data
                     else: # Rectilinear
                         st.session_state.recon_data['cest'] = load_study.recon_bruker(
                             submitted['cest_path'], submitted['folder_path']
-                        )
+                    if use_pca:
+                        # Apply PCA denoising
+                        denoised_images = pre_processing.denoise_data(recon_data['imgs'])
+                        st.session_state.recon_data['cest'] = {
+                            "imgs": denoised_images,
+                            "offsets": recon_data['offsets']
+                        }
+                    else:
+                        # Just reconstruction
+                        st.session_state.recon_data['cest'] = recon_data
+
                 if exp_type == 'wassr':
                     wassr_type = submitted.get('wassr_type')
                     if wassr_type == 'Radial' and submitted.get('moco_wassr'):
