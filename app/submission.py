@@ -60,10 +60,10 @@ def do_data_submission():
                         st.session_state.extracted_base_name = folder_path.name
                         st.session_state.last_zip_id = zip_id
                         status.update(label="Extraction complete!", state="complete")
-            except Exception as e:
-                st.error(f"Security/Processing Error: {e}")
-                manager.cleanup_now()
-                folder_path = None
+                    except Exception as e:
+                        st.error(f"Security/Processing Error: {e}")
+                        manager.cleanup_now()
+                        folder_path = None
 
         save_suffix = st.text_input('Output suffix (optional)',
             placeholder = 'Liver_5uT_Radial_v1',
