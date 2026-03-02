@@ -357,7 +357,6 @@ def do_data_submission():
                     if os.path.isdir(wassr_full_path):
                         if wassr_type == "Rectilinear" and "traj" in os.listdir(wassr_full_path):
                             st.warning("The presence of a gradient trajectory file suggests the data might be radial.")
-                            wassr_validation = False
                         missing_items = validation.validate_radial(wassr_full_path) if wassr_type == "Radial" else validation.validate_rectilinear(wassr_full_path)
                         if missing_items:
                             st.error(f"WASSR folder is missing the following required items: {', '.join(missing_items)}")
