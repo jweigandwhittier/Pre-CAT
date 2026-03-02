@@ -125,7 +125,7 @@ def do_data_submission():
                     )
                     if "CEST" in selection and cest_type == "Radial":
                         moco_cest = st.toggle('Motion correction (CEST)', help="Correct bulk motion by discarding spokes based on projection images.")
-                        pca = st.toggle('Z-spectral denoising', help="Z-spectral denoising with principal component analysis. This is a *global* method using Malinowskis empirical indicator function.")
+                    pca = st.toggle('Z-spectral denoising', help="Z-spectral denoising with principal component analysis. This is a *global* method using Malinowskis empirical indicator function.")
                     pixelwise = st.toggle(
                         'Pixelwise mapping', help="Accuracy is highly dependent on field homogeneity.")
                     if pixelwise:
