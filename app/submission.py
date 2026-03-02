@@ -36,7 +36,7 @@ def do_data_submission():
         if uploaded_zip:
             zip_id = f"{uploaded_zip.name}_{uploaded_zip.size}"
             if st.session_state.get("last_zip_id") != zip_id:
-                with st.status("Extracting and verifying study...") as status:
+                with st.spinner("Extracting and verifying study...") as status:
                     try:
                         # Create a temp directory to extract the zip file
                         temp_upload_dir = Path(manager.get_upload_dir()).resolve()
@@ -59,7 +59,7 @@ def do_data_submission():
                         st.session_state.extracted_folder_path = folder_path
                         st.session_state.extracted_base_name = folder_path.name
                         st.session_state.last_zip_id = zip_id
-                        status.update(label="Extraction complete!", state="complete")
+                        st.success("Extraction complete!")
                     except Exception as e:
                         st.error(f"Security/Processing Error: {e}")
                         manager.cleanup_now()
