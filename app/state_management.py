@@ -57,3 +57,5 @@ def clear_session_state():
         st.session_state.temp_dir_manager.cleanup_now()
     for key in list(st.session_state.keys()):
         del st.session_state[key]
+    initialize_session_state()
+    st.rerun()
