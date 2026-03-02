@@ -42,9 +42,9 @@ def do_processing_pipeline():
             for exp_type in tasks_to_run:
                 if exp_type == 'cest':
                     cest_type = submitted.get('cest_type')
+                    use_pca = submitted.get('pca', False)
                     if cest_type == 'Radial':
                         use_moco = submitted.get('moco_cest', False)
-                        use_pca = submitted.get('pca', False)
                         if use_moco:
                             # With motion correction (with or without PCA)
                             st.session_state.recon_data['cest'] = pre_processing.run_radial_preprocessing(
