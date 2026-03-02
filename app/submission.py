@@ -93,7 +93,7 @@ def do_data_submission():
             
             # CEST validation
             if "CEST" in selection:
-                cest_path = st.text_input('Input CEST experiment number', placeholder='5')
+                cest_path = st.text_input('Input CEST experiment number', placeholder='3')
                 if not cest_path:
                     all_fields_filled = False  # CEST path is required
                 if cest_path:
@@ -194,12 +194,12 @@ def do_data_submission():
                     t1_input_method = None
                     fixed_t1_s = None
                     t1_path = None
-                    quesp_path = st.text_input('Input QUESP experiment number', help="Currently, only QUESP data acquired using the 'fp_EPI' sequence are supported.")
+                    quesp_path = st.text_input('Input QUESP experiment number', placeholder='4', help="Currently, only QUESP data acquired using the 'fp_EPI' sequence are supported.")
                     
                     t1_input_method = st.radio("T1 Input Method", ["Use T1 Map", "Use Fixed T1 Value"], horizontal=True, key="quesp_t1_method")
                     
                     if t1_input_method == "Use T1 Map":
-                        t1_path = st.text_input('Input T1 mapping experiment number', help="Currently, only VTR RARE T1 mapping is supported.")
+                        t1_path = st.text_input('Input T1 mapping experiment number', placeholder='5', help="Currently, only VTR RARE T1 mapping is supported.")
                     elif t1_input_method == "Use Fixed T1 Value":
                         fixed_t1_s = st.number_input("Input Fixed T1 Value (ms)", min_value=1, value=2000, step=1, format="%i", help="Enter the global T1 relaxation time in milliseconds.")
                     quesp_inputs_provided = quesp_path and \
@@ -279,7 +279,7 @@ def do_data_submission():
                 if anatomy == 'Cardiac':
                     st.error("CEST-MRF analysis is only supported for non-cardiac ROIs at this time.")
                 else:
-                    mrf_path = st.text_input('Input CEST-MRF experiment number', help="Currently, only CEST-MRF data acquired using the 'fp_EPI' sequence are supported.")
+                    mrf_path = st.text_input('Input CEST-MRF experiment number', placeholder='4', help="Currently, only CEST-MRF data acquired using the 'fp_EPI' sequence are supported.")
                     if mrf_path:
                         mrf_full_path = os.path.join(folder_path, mrf_path)
                         mrf_folder_exists = os.path.isdir(mrf_full_path)
@@ -342,7 +342,7 @@ def do_data_submission():
 
             # WASSR validation
             if "WASSR" in selection:
-                wassr_path = st.text_input('Input WASSR experiment number')
+                wassr_path = st.text_input('Input WASSR experiment number', placeholder='4')
                 if not wassr_path:
                     all_fields_filled = False  # WASSR path is required
                 if wassr_path:
@@ -369,8 +369,8 @@ def do_data_submission():
     
             # DAMB1 validation
             if "DAMB1" in selection:
-                theta_path = st.text_input('Input DAMB1 experiment number for α')
-                two_theta_path = st.text_input('Input DAMB1 experiment number for 2α')
+                theta_path = st.text_input('Input DAMB1 experiment number for α', placeholder='5')
+                two_theta_path = st.text_input('Input DAMB1 experiment number for 2α', placeholder='6')
                 if not theta_path or not two_theta_path:
                     all_fields_filled = False 
     
