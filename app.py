@@ -21,6 +21,19 @@ from custom import st_functions
 SITE_ICON = "./custom/icons/ksp.ico"
 LOADING_GIF_PATH = Path("custom/icons/loading.gif")
 
+# --- Cached resources --- #
+@st.cache_resource
+def setup_assets():
+    if LOADING_GIF_PATH.exists():
+        st_functions.inject_custom_loader(LOADING_GIF_PATH)
+    st_functions.inject_spinning_logo_css(SITE_ICON)
+    return True
+
+@st.cache_resource
+def check_tools_cached():
+    return validation.check_mrf_tools_installed()
+    
+
 # --- Main app --- #
 def main():
     """
@@ -28,9 +41,7 @@ def main():
     """
     # Setup
     st.set_page_config(page_title="Pre-CAT", initial_sidebar_state="expanded", page_icon=SITE_ICON)
-    if LOADING_GIF_PATH.exists():
-        st_functions.inject_custom_loader(LOADING_GIF_PATH)
-    st_functions.inject_spinning_logo_css(SITE_ICON)
+    setup_assets()
     state_management.initialize_session_state()
     if "temp_dir_manager" not in st.session_state:
         st.session_state.temp_dir_manager = data_management.TempDirManager()
@@ -43,7 +54,7 @@ def main():
         unsafe_allow_html=True
     )
     st.write("### A preclinical CEST-MRI analysis toolbox.")
-    if not validation.check_mrf_tools_installed():
+    if not check_tools_cached:
         st.error('CEST-MRF tools not found.')
         st.markdown("""
         The required simulation libraries are missing or not compiled. 

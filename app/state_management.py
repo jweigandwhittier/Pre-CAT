@@ -17,6 +17,10 @@ def initialize_session_state():
         "processing_active": False,
         "is_processed": False,
         "display_data": False,
+        # Upload management
+        "last_zip_id": None,
+        "extracted_folder_path": None,
+        "extracted_base_name": None,
         # User selections
         "submitted_data": {},
         "custom_contrasts": None,

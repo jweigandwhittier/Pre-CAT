@@ -30,28 +30,36 @@ def do_data_submission():
         manager = st.session_state.temp_dir_manager
         uploaded_zip = st.file_uploader("Upload entire ParaVision study (.zip file)", type="zip")
 
-        folder_path = None 
-        base_folder_name = None
+        folder_path = st.session_state.get("extracted_folder_path")
+        base_folder_name = st.session_state.get("extracted_base_name")
 
         if uploaded_zip:
-            try:
-                # Create a temp directory to extract the zip file
-                temp_upload_dir = Path(manager.get_upload_dir()).resolve()
-                with zipfile.ZipFile(uploaded_zip, 'r') as zip_ref:
-                    # Add some security checks
-                    total_size = sum(file.file_size for file in zip_ref.infolist())
-                    if total_size > 3*1024*1024*1024:
-                        raise ValueError("Uncompressed data exceeds 3GB limit.")
-                    for member in zip_ref.namelist():
-                        target_path = (temp_upload_dir / member).resolve()
-                        if temp_upload_dir not in target_path.parents and temp_upload_dir != target_path:
-                            raise PermissionError(f"Blocked malicious path: {member}")
-                    zip_ref.extractall(temp_upload_dir)
-                safe_zip_name = os.path.basename(uploaded_zip.name)
-                expected_folder_name = Path(safe_zip_name).stem
-                potential_path = temp_upload_dir / expected_folder_name
-                folder_path = potential_path if potential_path.is_dir() else temp_upload_dir
-                base_folder_name = folder_path.name
+            zip_id = f"{uploaded_zip.name}_{uploaded_zip.size}"
+            if st.session_state.get("last_zip_id") != zip_id:
+                with st.status("Extracting and verifying study...") as status:
+                    try:
+                        # Create a temp directory to extract the zip file
+                        temp_upload_dir = Path(manager.get_upload_dir()).resolve()
+                        with zipfile.ZipFile(uploaded_zip, 'r') as zip_ref:
+                            # Add some security checks
+                            total_size = sum(file.file_size for file in zip_ref.infolist())
+                            if total_size > 3*1024*1024*1024:
+                                raise ValueError("Uncompressed data exceeds 3GB limit.")
+                            for member in zip_ref.namelist():
+                                target_path = (temp_upload_dir / member).resolve()
+                                if temp_upload_dir not in target_path.parents and temp_upload_dir != target_path:
+                                    raise PermissionError(f"Blocked malicious path: {member}")
+                            zip_ref.extractall(temp_upload_dir)
+                        safe_zip_name = os.path.basename(uploaded_zip.name)
+                        expected_folder_name = Path(safe_zip_name).stem
+                        potential_path = temp_upload_dir / expected_folder_name
+                        folder_path = potential_path if potential_path.is_dir() else temp_upload_dir
+                        base_folder_name = folder_path.name
+                        # Store in session state
+                        st.session_state.extracted_folder_path = folder_path
+                        st.session_state.extracted_base_name = folder_path.name
+                        st.session_state.last_zip_id = zip_id
+                    status.update(label="Extraction complete!", state="complete")
             except Exception as e:
                 st.error(f"Security/Processing Error: {e}")
                 manager.cleanup_now()
@@ -408,16 +416,6 @@ def do_data_submission():
                     if st.button("Submit"):
                         st.session_state.is_submitted = True
                         st.session_state.processing_active = True
-                        # Ensure Data folder exists within the main path
-                        # data_folder = os.path.join(folder_path, "Data")
-                        # if not os.path.isdir(data_folder):
-                        #     os.makedirs(data_folder)
-                        
-                        # Create folder for save_path within Data
-                        # save_full_path = os.path.join(data_folder, save_path)
-                        # if not os.path.isdir(save_full_path):
-                        #     os.makedirs(save_full_path)
-                        # save_path = save_full_path  # Overwrite save_path with the full path
                         temp_results_dir = manager.get_results_dir()
                         save_path = temp_results_dir
                         st.session_state.submitted_data = {
