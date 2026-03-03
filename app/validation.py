@@ -56,7 +56,9 @@ def validate_double_angle(directory, theta_path, two_theta_path):
     two_theta = exp_two_theta.acqp['ACQ_flip_angle']
     if 2*theta != two_theta:
         return True, theta, two_theta
-    elif 2*theta == two_theta:
+    elif two_theta < 90
+        return True, theta, two_theta
+    else:
         return False, theta, two_theta
 
 def validate_fp_quesp(directory, quesp_path, t1_path):
