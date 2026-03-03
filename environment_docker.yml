@@ -19,6 +19,7 @@ dependencies:
   - seaborn
   - sigpy 
   - h5py
+  - tornado=6.1
   - pip:
     - streamlit-drawable-canvas
     - bmctool==0.5.0
