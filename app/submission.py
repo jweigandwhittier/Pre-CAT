@@ -404,6 +404,7 @@ def do_data_submission():
                         bad_flips, theta, two_theta = validation.validate_double_angle(folder_path, theta_path, two_theta_path)  
                         if bad_flips:
                             st.error("Incorrect flip angles: α = %i, 2α = %i" % (theta, two_theta))
+                            damb1_validation = False
                         else:
                             st.success("Flip angle validation successful! ")
             
