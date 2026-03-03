@@ -278,6 +278,7 @@ def do_data_submission():
             if "CEST-MRF" in selection:
                 if anatomy == 'Cardiac':
                     st.error("CEST-MRF analysis is only supported for non-cardiac ROIs at this time.")
+                    mrf_validation = False
                 else:
                     mrf_path = st.text_input('Input CEST-MRF experiment number', placeholder='4', help="Currently, only CEST-MRF data acquired using the 'fp_EPI' sequence are supported.")
                     if mrf_path:
