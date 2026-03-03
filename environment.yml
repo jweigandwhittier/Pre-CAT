@@ -27,6 +27,7 @@ dependencies:
   - seaborn
   - sigpy 
   - h5py
+  - tornado=6.1
 
   # Pip-installed packages
   - pip:
