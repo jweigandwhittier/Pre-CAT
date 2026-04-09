@@ -275,7 +275,7 @@ def save_df_to_csv(dataframe, save_path, type):
     data_path = os.path.join(save_path, 'Raw')
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
-    dataframe.to_csv(os.path.join(data_path, f'{type}.csv'), index=False)       
+    dataframe.reset_index().to_csv(os.path.join(data_path, f'{type}.csv'), index=False)       
 
 def message_logging(message, msg_type='success'):
     """

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jul 30 11:42:34 2025
@@ -52,6 +52,7 @@ def seq_from_method(num, directory, cfg):
 	td = 0 # Set to 0 for now
 	tsat_array = np.round(method['PVM_MagTransPulsNumb'] * (tp_array + td) - td, 3)
 	dcsat_array = tp_array / (tp_array + td) if (tp_array + td).all() != 0 else np.zeros_like(tp_array)
+	fa_array = method['Fp_FlipAngle']
 	# Create new seq_def dictionary
 	seq_defs = {}
 	seq_defs['n_pulses'] = method['PVM_MagTransPulsNumb']
@@ -69,7 +70,7 @@ def seq_from_method(num, directory, cfg):
 	# Get other parameters
 	seq_defs['texc'] = np.round(method['ExcPul'][0] * 1e-3, 3) # Length of excitation pulse [s]
 	seq_defs['te'] = np.round(method['EchoTime'] * 1e-3, 3) # Readout time for EPI
-	seq_defs['fa'] = acqp['ACQ_flip_angle']
+	seq_defs['fa'] = fa_array.tolist()
 	# Filename to save sequence
 	seq_fn = cfg['seq_fn']
 	seqid = os.path.splitext(seq_fn)[1][1:]
@@ -84,11 +85,6 @@ def write_sequence(seq_defs, seq_fn, cfg):
 	"""
 	# Constants 
 	GAMMA = cfg['gamma']
-	# This is the info for the 2d readout sequence. As gradients etc ar
-    # simulated as delay, we can just add a delay afetr the imaging pulse for
-    # simulation which has the same duration as the actual sequence
-    # the flip angle of the readout sequence:
-	exc_pulse = pp.make_block_pulse(seq_defs['fa'] * np.pi / 180, duration = seq_defs['texc'])
 	imaging_delay = pp.make_delay(seq_defs['te'])
 	# Init sequence
 	seq = pp.Sequence()
@@ -110,6 +106,8 @@ def write_sequence(seq_defs, seq_fn, cfg):
 			if n_p < seq_defs['n_pulses'] - 1:
 				seq.add_block(pp.make_delay(seq_defs['td']))
 	    # Add acq block
+	    fa = seq_defs['fa'][idx]
+	    exc_pulse = pp.make_block_pulse(fa * np.pi / 180, duration = seq_defs['texc'])
 		seq.add_block(exc_pulse)
 		seq.add_block(imaging_delay)
 		pseudo_adc = pp.make_adc(1, duration=1e-3)
