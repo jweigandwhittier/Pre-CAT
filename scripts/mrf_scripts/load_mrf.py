@@ -106,7 +106,7 @@ def write_sequence(seq_defs, seq_fn, cfg):
 			if n_p < seq_defs['n_pulses'] - 1:
 				seq.add_block(pp.make_delay(seq_defs['td']))
 	    # Add acq block
-	    fa = seq_defs['fa'][idx]
+		fa = seq_defs['fa'][idx]
 	    exc_pulse = pp.make_block_pulse(fa * np.pi / 180, duration = seq_defs['texc'])
 		seq.add_block(exc_pulse)
 		seq.add_block(imaging_delay)
