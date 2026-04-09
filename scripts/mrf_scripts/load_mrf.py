@@ -107,7 +107,7 @@ def write_sequence(seq_defs, seq_fn, cfg):
 				seq.add_block(pp.make_delay(seq_defs['td']))
 	    # Add acq block
 		fa = seq_defs['fa'][idx]
-	    exc_pulse = pp.make_block_pulse(fa * np.pi / 180, duration = seq_defs['texc'])
+		exc_pulse = pp.make_block_pulse(fa * np.pi / 180, duration = seq_defs['texc'])
 		seq.add_block(exc_pulse)
 		seq.add_block(imaging_delay)
 		pseudo_adc = pp.make_adc(1, duration=1e-3)
