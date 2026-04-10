@@ -83,15 +83,15 @@ def write_sequence(seq_defs, seq_fn, cfg):
 	Create preclinical continous-wave sequence for CEST with simple readout.
 	Adapted from code by NV.
 	"""
+	# Init sequence
+	seq = pp.Sequence()
 	# Constants 
 	GAMMA = cfg['gamma']
 	imaging_delay = pp.make_delay(seq_defs['te'])
-	# Init sequence
-	seq = pp.Sequence()
 	# Loop B1s
 	for idx, b1 in enumerate(seq_defs['B1pa']):
 		if idx > 0:
-			delay_duration = seq_defs['Trec'][idx - 1] - imaging_delay
+			delay_duration = seq_defs['Trec'][idx - 1] - seq_defs['te']
 			seq.add_block(pp.make_delay(delay_duration))
 		# Sat pulse
 		current_offset_hz = seq_defs['offsets_hz'][idx]
