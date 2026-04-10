@@ -15,17 +15,17 @@ b0_inhom = 0 # B0 inhomogeneity
 rel_b1 = 1 # Relative B1
 
 # ## Water pool (a)
-t1 = np.arange(2500.0, 3350.0 + 50, 50) / 1000  # (s)
-t2 = np.arange(600.0, 1250.0 + 50, 50) / 1000  # (s)
+t1 = np.arange(2500.0, 3300.0 + 50, 50) / 1000  # (s)
+t2 = np.arange(600.0, 1200.0 + 50, 50) / 1000  # (s)
 
 # ## Solute pool (b)
 pool_b_name = 'Cr'
 pool_b_dw = 2.0  # Chemical shift of the CEST pool in [ppm]
-pool_b_t1 = 555.5 / 1000  # (s) 
+pool_b_t1 = 2900 / 1000  # (s) 
 pool_b_t2 = 33.3 / 1000  # (s)
 pool_b_num_exchangeable_protons = 4.0  # Number of exchangeable solute protons
-pool_b_concentration = np.arange(2.0, 80.0 + 2.0, 2.0)  # Solute concentration (mM)
-k_b = np.arange(100.0, 500.0 + 5.0, 5.0)  # Solute chemical exchange rate (s^-1)
+pool_b_concentration = np.arange(0.0, 80.0 + 2.0, 2.0)  # Solute concentration (mM)
+k_b = np.arange(10.0, 600.0 + 5.0, 5.0)  # Solute chemical exchange rate (s^-1)
 # Proton fraction can be defined directly OR calculated from concentration
 f_b = pool_b_num_exchangeable_protons * pool_b_concentration / 111e3  # Proton fraction [0,1]
 
